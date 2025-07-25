@@ -1,0 +1,100 @@
+/* Base Styles */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f8f9fa; /* Light white background */
+    color: #343a40; /* Dark text */
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.navbar {
+    background-color: #007bff; /* Blue */
+}
+
+.navbar-brand, .nav-link {
+    color: #fff !important; /* White text for navbar */
+}
+
+.btn-primary {
+    background-color: #007bff; /* Blue */
+    border-color: #007bff;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+    border-color: #0056b3;
+}
+
+.card {
+    border: 1px solid #dee2e6; /* Light grey border */
+    border-radius: .25rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.form-control {
+    border-color: #ced4da;
+}
+
+.alert {
+    margin-top: 1rem;
+}
+
+/* Dark Mode Styles */
+body.dark-mode {
+    background-color: #343a40; /* Dark grey background */
+    color: #f8f9fa; /* Light text */
+}
+
+.dark-mode .navbar {
+    background-color: #212529; /* Darker grey */
+}
+
+.dark-mode .navbar-brand, .dark-mode .nav-link {
+    color: #f8f9fa !important;
+}
+
+.dark-mode .card {
+    background-color: #495057; /* Slightly lighter dark grey */
+    border-color: #6c757d;
+    color: #f8f9fa;
+}
+
+.dark-mode .form-control {
+    background-color: #6c757d;
+    color: #f8f9fa;
+    border-color: #6c757d;
+}
+
+.dark-mode .form-control::placeholder {
+    color: #dee2e6;
+}
+
+.dark-mode .btn-primary {
+    background-color: #1a6dcd; /* Darker blue for dark mode */
+    border-color: #1a6dcd;
+}
+
+.dark-mode .btn-primary:hover {
+    background-color: #145aa8;
+    border-color: #145aa8;
+}
+
+.dark-mode table {
+    color: #f8f9fa;
+}
+
+.dark-mode table thead th {
+    color: #dee2e6;
+    border-bottom-color: #6c757d;
+}
+
+.dark-mode table tbody tr {
+    background-color: #495057;
+}
+
+.dark-mode table tbody tr:nth-of-type(odd) {
+    background-color: #5a6268;
+}
+
+.dark-mode table td {
+    border-top-color: #6c757d;
+}

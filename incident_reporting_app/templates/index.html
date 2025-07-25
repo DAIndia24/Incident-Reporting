@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Welcome{% endblock %}
+
+{% block content %}
+<div class="text-center my-5">
+    <h1 class="display-4">Welcome to the Incident Reporting System</h1>
+    <p class="lead">Your anonymous and efficient way to report incidents.</p>
+    <div class="mt-4">
+        <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg me-3">Create Account</a>
+        <a href="{{ url_for('login') }}" class="btn btn-outline-primary btn-lg">Login</a>
+    </div>
+    <div class="mt-3">
+        <p class="mb-0">Prefer to report anonymously?</p>
+        <a href="{{ url_for('report_incident') }}" class="btn btn-link">Submit an Anonymous Report</a>
+    </div>
+    <div class="mt-5">
+        <p class="mb-0">Are you an administrator?</p>
+        <a href="{{ url_for('admin_login') }}" class="btn btn-link">Admin Login</a>
+    </div>
+</div>
+{% endblock %}

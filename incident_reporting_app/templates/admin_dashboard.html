@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Incident Reports</h2>
+
+{% if incidents %}
+<div class="table-responsive">
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th scope="col">#</th>
+                <th scope="col">Department</th>
+                <th scope="col">Nature</th>
+                <th scope="col">Description</th>
+                <th scope="col">Submitted On</th>
+                <th scope="col">Status</th>
+                <th scope="col">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for incident in incidents %}
+            <tr>
+                <th scope="row">{{ incident.id }}</th>
+                <td>{{ incident.department }}</td>
+                <td>{{ incident.nature }}</td>
+                <td>{{ incident.description if incident.description else 'N/A' }}</td>
+                <td>{{ incident.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>
+                    <span class="badge {% if incident.status == 'Pending' %}bg-warning{% elif incident.status == 'In Progress' %}bg-info{% elif incident.status == 'Resolved' %}bg-success{% else %}bg-secondary{% endif %}">
+                        {{ incident.status }}
+                    </span>
+                </td>
+                <td>
+                    <form action="{{ url_for('admin_dashboard') }}" method="POST" class="d-flex">
+                        <input type="hidden" name="incident_id" value="{{ incident.id }}">
+                        <select class="form-select form-select-sm me-2" name="status" aria-label="Incident Status">
+                            <option value="Pending" {% if incident.status == 'Pending' %}selected{% endif %}>Pending</option>
+                            <option value="In Progress" {% if incident.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+                            <option value="Resolved" {% if incident.status == 'Resolved' %}selected{% endif %}>Resolved</option>
+                        </select>
+                        <button type="submit" class="btn btn-sm btn-primary">Update</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="alert alert-info" role="alert">
+    No incident reports to display.
+</div>
+{% endif %}
+{% endblock %}
