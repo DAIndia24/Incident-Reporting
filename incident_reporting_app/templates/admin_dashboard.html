@@ -7,50 +7,78 @@
 
 {% if incidents %}
 <div class="table-responsive">
-    <table class="table table-striped table-hover">
-        <thead>
-            <tr>
-                <th scope="col">#</th>
-                <th scope="col">Department</th>
-                <th scope="col">Nature</th>
-                <th scope="col">Description</th>
-                <th scope="col">Submitted On</th>
-                <th scope="col">Status</th>
-                <th scope="col">Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for incident in incidents %}
-            <tr>
-                <th scope="row">{{ incident.id }}</th>
-                <td>{{ incident.department }}</td>
-                <td>{{ incident.nature }}</td>
-                <td>{{ incident.description if incident.description else 'N/A' }}</td>
-                <td>{{ incident.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
-                <td>
-                    <span class="badge {% if incident.status == 'Pending' %}bg-warning{% elif incident.status == 'In Progress' %}bg-info{% elif incident.status == 'Resolved' %}bg-success{% else %}bg-secondary{% endif %}">
-                        {{ incident.status }}
-                    </span>
-                </td>
-                <td>
-                    <form action="{{ url_for('admin_dashboard') }}" method="POST" class="d-flex">
-                        <input type="hidden" name="incident_id" value="{{ incident.id }}">
-                        <select class="form-select form-select-sm me-2" name="status" aria-label="Incident Status">
-                            <option value="Pending" {% if incident.status == 'Pending' %}selected{% endif %}>Pending</option>
-                            <option value="In Progress" {% if incident.status == 'In Progress' %}selected{% endif %}>In Progress</option>
-                            <option value="Resolved" {% if incident.status == 'Resolved' %}selected{% endif %}>Resolved</option>
-                        </select>
-                        <button type="submit" class="btn btn-sm btn-primary">Update</button>
-                    </form>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+  <div class="mb-3">
+    <input
+      type="text"
+      id="incident-search"
+      class="form-control"
+      placeholder="Search incidents…"
+    />
+  </div>
+
+  <!-- Added id="incidents-table" -->
+  <table id="incidents-table" class="table table-striped table-hover">
+    <thead>
+      <tr>
+        <th scope="col">#</th>
+        <th scope="col">Department</th>
+        <th scope="col">Nature</th>
+        <th scope="col">Description</th>
+        <th scope="col">Submitted On</th>
+        <th scope="col">Status</th>
+        <th scope="col">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for incident in incidents %}
+      <tr>
+        <th scope="row">{{ incident.id }}</th>
+        <td>{{ incident.department }}</td>
+        <td>{{ incident.nature }}</td>
+        <td>{{ incident.description if incident.description else 'N/A' }}</td>
+        <td>{{ incident.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td>
+          <span class="badge
+            {% if incident.status == 'Pending' %}bg-warning
+            {% elif incident.status == 'In Progress' %}bg-info
+            {% elif incident.status == 'Resolved' %}bg-success
+            {% else %}bg-secondary{% endif %}">
+            {{ incident.status }}
+          </span>
+        </td>
+        <td>
+          <form action="{{ url_for('admin_dashboard') }}" method="POST" class="d-flex">
+            <input type="hidden" name="incident_id" value="{{ incident.id }}">
+            <select class="form-select form-select-sm me-2" name="status" aria-label="Incident Status">
+              <option value="Pending" {% if incident.status == 'Pending' %}selected{% endif %}>Pending</option>
+              <option value="In Progress" {% if incident.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+              <option value="Resolved" {% if incident.status == 'Resolved' %}selected{% endif %}>Resolved</option>
+            </select>
+            <button type="submit" class="btn btn-sm btn-primary">Update</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <script>
+    document
+      .getElementById('incident-search')
+      .addEventListener('keyup', function () {
+        const filter = this.value.toLowerCase();
+        document
+          .querySelectorAll('#incidents-table tbody tr')
+          .forEach(row => {
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(filter) ? '' : 'none';
+          });
+      });
+  </script>
 </div>
 {% else %}
 <div class="alert alert-info" role="alert">
-    No incident reports to display.
+  No incident reports to display.
 </div>
 {% endif %}
 {% endblock %}
