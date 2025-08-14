@@ -73,7 +73,7 @@
     <!-- Bootstrap Bundle (with Popper) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- Dark mode script (your existing file) -->
+    <!-- Dark mode script -->
     <script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
 
     <!-- Shared password toggle (works site-wide) -->
@@ -101,10 +101,6 @@
 
     <!-- Lightweight password strength evaluator & helpers -->
     <script>
-      /**
-       * Returns a strength object { score: 0..4, label: string, suggestions: string[] }
-       * Heuristic: length, variety of character classes, and simple pattern checks.
-       */
       function assessPasswordStrength(pw, username = '') {
         const suggestions = [];
         if (!pw) return { score: 0, label: 'Very weak', suggestions: ['Enter a password.'] };
@@ -115,8 +111,7 @@
         const hasDigit = /\d/.test(pw);
         const hasSymbol = /[^A-Za-z0-9]/.test(pw);
 
-        // Penalize obvious patterns
-        const sequences = ['1234','abcd','qwerty','password','letmein','admin', 'iloveyou'];
+        const sequences = ['1234','abcd','qwerty','password','letmein','admin','iloveyou'];
         const containsSequence = sequences.some(s => pw.toLowerCase().includes(s));
         const containsUsername = username ? pw.toLowerCase().includes(String(username).toLowerCase()) : false;
         const repeatedChars = /(.)\1{2,}/.test(pw); // 3+ same chars in a row
@@ -138,7 +133,6 @@
         if (repeatedChars) score = Math.max(0, score - 1);
         if (length < 6) score = 0;
 
-        // Suggestions
         if (length < 12) suggestions.push('Use at least 12 characters.');
         if (variety < 3) suggestions.push('Mix upper/lowercase, numbers, and symbols.');
         if (containsSequence) suggestions.push('Avoid common sequences (e.g., "1234", "qwerty").');
@@ -151,15 +145,7 @@
       }
 
       /**
-       * Wire up a strength UI.
-       * @param {Object} opts
-       *  - inputId: password input id
-       *  - usernameId: optional username input id
-       *  - barsSelector: CSS selector for the 4 meter bars container
-       *  - labelSelector: selector for label text
-       *  - listSelector: selector for suggestions UL
-       *  - submitId: submit button id (to toggle disable)
-       *  - minScore: minimum acceptable score (0..4). Default 2 ("OK").
+       * Strength UI
        */
       function initPasswordStrength(opts) {
         const {
@@ -182,7 +168,7 @@
 
           // Update bars
           bars.forEach((b, i) => {
-            b.classList.remove('weak','ok','good','excellent','filled');
+            b.classList.remove('filled');
             if (i <= score - 1) b.classList.add('filled');
           });
           const container = document.querySelector(barsSelector);
@@ -200,13 +186,53 @@
             listEl.appendChild(li);
           });
 
-          // Enable/disable submit based on threshold
-          if (submitBtn) submitBtn.disabled = score < minScore;
+          // Do not decide submit here — confirm-match also controls it.
+          return score;
         };
 
+        // expose updater for other modules (confirm-match)
         input.addEventListener('input', update);
         if (usernameInput) usernameInput.addEventListener('input', update);
         update();
+
+        return { getScore: () => {
+          const username = usernameInput ? usernameInput.value : '';
+          return assessPasswordStrength(input.value, username).score;
+        }};
+      }
+
+      /**
+       * Confirm password match UI
+       * Disables submit if mismatch or strength below threshold
+       */
+      function initConfirmPassword(opts) {
+        const {
+          passwordId, confirmId, messageSelector, submitId,
+          // Provide a strengthRef from initPasswordStrength to check current score
+          strengthRef, minScore = 2
+        } = opts;
+
+        const pw = document.getElementById(passwordId);
+        const cpw = document.getElementById(confirmId);
+        const msg = document.querySelector(messageSelector);
+        const submitBtn = document.getElementById(submitId);
+
+        if (!pw || !cpw || !msg || !submitBtn) return;
+
+        const evaluate = () => {
+          const match = pw.value && cpw.value && pw.value === cpw.value;
+          // visual feedback
+          cpw.classList.toggle('is-invalid', !match && cpw.value.length > 0);
+          cpw.classList.toggle('is-valid', match && cpw.value.length > 0);
+          msg.textContent = match ? '' : 'Passwords do not match.';
+
+          const strengthOK = strengthRef ? (strengthRef.getScore() >= minScore) : true;
+          submitBtn.disabled = !(match && strengthOK);
+        };
+
+        pw.addEventListener('input', evaluate);
+        cpw.addEventListener('input', evaluate);
+        evaluate();
       }
     </script>
 </body>

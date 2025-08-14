@@ -1,107 +1,42 @@
 /* Base Styles */
 body {
     font-family: Arial, sans-serif;
-    background-color: #f8f9fa; /* Light white background */
-    color: #343a40; /* Dark text */
+    background-color: #f8f9fa;
+    color: #343a40;
     transition: background-color 0.3s, color 0.3s;
 }
 
-.navbar {
-    background-color: #007bff; /* Blue */
-}
+.navbar { background-color: #007bff; }
+.navbar-brand, .nav-link { color: #fff !important; }
 
-.navbar-brand, .nav-link {
-    color: #fff !important; /* White text for navbar */
-}
-
-.btn-primary {
-    background-color: #007bff; /* Blue */
-    border-color: #007bff;
-}
-
-.btn-primary:hover {
-    background-color: #0056b3;
-    border-color: #0056b3;
-}
+.btn-primary { background-color: #007bff; border-color: #007bff; }
+.btn-primary:hover { background-color: #0056b3; border-color: #0056b3; }
 
 .card {
-    border: 1px solid #dee2e6; /* Light grey border */
+    border: 1px solid #dee2e6;
     border-radius: .25rem;
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
 }
 
-.form-control {
-    border-color: #ced4da;
-}
+.form-control { border-color: #ced4da; }
+.alert { margin-top: 1rem; }
 
-.alert {
-    margin-top: 1rem;
-}
+/* Dark Mode */
+body.dark-mode { background-color: #343a40; color: #f8f9fa; }
+.dark-mode .navbar { background-color: #212529; }
+.dark-mode .navbar-brand, .dark-mode .nav-link { color: #f8f9fa !important; }
+.dark-mode .card { background-color: #495057; border-color: #6c757d; color: #f8f9fa; }
+.dark-mode .form-control { background-color: #6c757d; color: #f8f9fa; border-color: #6c757d; }
+.dark-mode .form-control::placeholder { color: #dee2e6; }
+.dark-mode .btn-primary { background-color: #1a6dcd; border-color: #1a6dcd; }
+.dark-mode .btn-primary:hover { background-color: #145aa8; border-color: #145aa8; }
+.dark-mode table { color: #f8f9fa; }
+.dark-mode table thead th { color: #dee2e6; border-bottom-color: #6c757d; }
+.dark-mode table tbody tr { background-color: #495057; }
+.dark-mode table tbody tr:nth-of-type(odd) { background-color: #5a6268; }
+.dark-mode table td { border-top-color: #6c757d; }
 
-/* Dark Mode Styles */
-body.dark-mode {
-    background-color: #343a40; /* Dark grey background */
-    color: #f8f9fa; /* Light text */
-}
-
-.dark-mode .navbar {
-    background-color: #212529; /* Darker grey */
-}
-
-.dark-mode .navbar-brand, .dark-mode .nav-link {
-    color: #f8f9fa !important;
-}
-
-.dark-mode .card {
-    background-color: #495057; /* Slightly lighter dark grey */
-    border-color: #6c757d;
-    color: #f8f9fa;
-}
-
-.dark-mode .form-control {
-    background-color: #6c757d;
-    color: #f8f9fa;
-    border-color: #6c757d;
-}
-
-.dark-mode .form-control::placeholder {
-    color: #dee2e6;
-}
-
-.dark-mode .btn-primary {
-    background-color: #1a6dcd; /* Darker blue for dark mode */
-    border-color: #1a6dcd;
-}
-
-.dark-mode .btn-primary:hover {
-    background-color: #145aa8;
-    border-color: #145aa8;
-}
-
-.dark-mode table {
-    color: #f8f9fa;
-}
-
-.dark-mode table thead th {
-    color: #dee2e6;
-    border-bottom-color: #6c757d;
-}
-
-.dark-mode table tbody tr {
-    background-color: #495057;
-}
-
-.dark-mode table tbody tr:nth-of-type(odd) {
-    background-color: #5a6268;
-}
-
-.dark-mode table td {
-    border-top-color: #6c757d;
-}
-
-/* ================================
-   Password Toggle (Light + Dark)
-   ================================ */
+/* Password Toggle */
 .password-toggle-btn {
     background-color: rgba(0, 0, 0, 0.06);
     color: #212529;
@@ -110,44 +45,26 @@ body.dark-mode {
     z-index: 2;
     transition: background-color .15s, color .15s, border-color .15s, box-shadow .15s;
 }
-
 .password-toggle-btn:hover,
-.password-toggle-btn:focus {
-    background-color: rgba(0, 0, 0, 0.12);
-    color: #212529;
-    border-color: rgba(0, 0, 0, 0.20);
-}
-
-.password-toggle-btn:focus-visible {
-    outline: 2px solid currentColor;
-    outline-offset: 2px;
-}
-
-.password-toggle-btn i {
-    pointer-events: none;
-}
-
+.password-toggle-btn:focus { background-color: rgba(0,0,0,0.12); color: #212529; border-color: rgba(0,0,0,0.20); }
+.password-toggle-btn:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.password-toggle-btn i { pointer-events: none; }
 .dark-mode .password-toggle-btn {
-    background-color: rgba(255, 255, 255, 0.16);
+    background-color: rgba(255,255,255,0.16);
     color: #fff;
-    border: 1px solid rgba(255, 255, 255, 0.25);
+    border: 1px solid rgba(255,255,255,0.25);
 }
-
 .dark-mode .password-toggle-btn:hover,
 .dark-mode .password-toggle-btn:focus {
-    background-color: rgba(255, 255, 255, 0.28);
+    background-color: rgba(255,255,255,0.28);
     color: #fff;
-    border-color: rgba(255, 255, 255, 0.35);
+    border-color: rgba(255,255,255,0.35);
 }
 
 /* Ensure input has space for the toggle if pe-5 not present */
-.has-password-toggle .form-control {
-    padding-right: 3rem;
-}
+.has-password-toggle .form-control { padding-right: 3rem; }
 
-/* ================================
-   Password Strength Meter
-   ================================ */
+/* Password Strength Meter */
 .password-meter {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -156,7 +73,7 @@ body.dark-mode {
 .password-meter .meter-bar {
     height: .5rem;
     border-radius: .25rem;
-    background-color: #e9ecef; /* neutral */
+    background-color: #e9ecef;
     transition: background-color .2s ease-in-out, transform .2s ease-in-out;
 }
 .password-meter.score-0 .meter-bar.filled { background-color: #dc3545; } /* red */
@@ -164,8 +81,8 @@ body.dark-mode {
 .password-meter.score-2 .meter-bar.filled { background-color: #ffc107; } /* yellow */
 .password-meter.score-3 .meter-bar.filled { background-color: #0d6efd; } /* blue */
 .password-meter.score-4 .meter-bar.filled { background-color: #198754; } /* green */
+.dark-mode .password-meter .meter-bar { background-color: rgba(255,255,255,0.18); }
 
-/* Dark overrides: lighten neutrals, keep vivid hues readable */
-.dark-mode .password-meter .meter-bar {
-    background-color: rgba(255,255,255,0.18);
-}
+/* Confirm password feedback visibility in dark mode */
+.dark-mode .is-invalid { border-color: #f5c2c7 !important; }
+.dark-mode .invalid-feedback { color: #f8d7da !important; }
