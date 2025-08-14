@@ -10,33 +10,30 @@
         <h2 class="card-title text-center mb-4">Register</h2>
 
         <form method="POST" novalidate>
+          <!-- Username -->
           <div class="mb-3">
             <label for="reg-username" class="form-label">Username</label>
-            <input type="text" class="form-control" id="reg-username" name="username"
-                   autocomplete="username" required>
+            <input
+              type="text"
+              class="form-control"
+              id="reg-username"
+              name="username"
+              autocomplete="username"
+              required
+            >
           </div>
 
-          <div class="mb-2 position-relative has-password-toggle">
+          <!-- Password (no show/hide toggle) -->
+          <div class="mb-2">
             <label for="reg-password" class="form-label">Password</label>
             <input
               type="password"
-              class="form-control pe-5"
+              class="form-control"
               id="reg-password"
               name="password"
               autocomplete="new-password"
               required
             >
-            <button
-              type="button"
-              class="btn btn-sm password-toggle-btn position-absolute top-50 end-0 translate-middle-y me-2"
-              id="register-password-toggle"
-              aria-label="Show password"
-              aria-pressed="false"
-              onclick="togglePassword('reg-password','register-password-toggle')"
-            >
-              <i class="bi bi-eye" aria-hidden="true"></i>
-              <span class="visually-hidden">Toggle password visibility</span>
-            </button>
           </div>
 
           <!-- Strength Meter -->
@@ -51,29 +48,18 @@
             <small id="pw-label" class="fw-semibold">Very weak</small>
           </div>
 
-          <!-- Confirm Password -->
-          <div class="mb-2 position-relative has-password-toggle">
+          <!-- Confirm Password (no show/hide toggle) -->
+          <div class="mb-2">
             <label for="reg-password-confirm" class="form-label">Confirm Password</label>
             <input
               type="password"
-              class="form-control pe-5"
+              class="form-control"
               id="reg-password-confirm"
               name="password_confirm"
               autocomplete="new-password"
               required
               aria-describedby="confirmHelp"
             >
-            <button
-              type="button"
-              class="btn btn-sm password-toggle-btn position-absolute top-50 end-0 translate-middle-y me-2"
-              id="register-password-confirm-toggle"
-              aria-label="Show password"
-              aria-pressed="false"
-              onclick="togglePassword('reg-password-confirm','register-password-confirm-toggle')"
-            >
-              <i class="bi bi-eye" aria-hidden="true"></i>
-              <span class="visually-hidden">Toggle password visibility</span>
-            </button>
             <div id="confirmHelp" class="invalid-feedback" aria-live="polite"></div>
           </div>
 
@@ -83,6 +69,7 @@
             <ul id="pw-suggestions" class="mb-0 ps-3 small"></ul>
           </div>
 
+          <!-- Submit -->
           <button id="register-submit" type="submit" class="btn btn-primary w-100" disabled>
             Register
           </button>
