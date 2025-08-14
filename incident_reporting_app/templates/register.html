@@ -8,15 +8,34 @@
         <div class="card mt-5">
             <div class="card-body">
                 <h2 class="card-title text-center mb-4">Register</h2>
-                <form method="POST">
+                <form method="POST" novalidate>
                     <div class="mb-3">
-                        <label for="username" class="form-label">Username</label>
-                        <input type="text" class="form-control" id="username" name="username" required>
+                        <label for="reg-username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="reg-username" name="username" autocomplete="username" required>
                     </div>
-                    <div class="mb-3">
-                        <label for="password" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="password" name="password" required>
+
+                    <div class="mb-3 position-relative">
+                        <label for="reg-password" class="form-label">Password</label>
+                        <input
+                          type="password"
+                          class="form-control pe-5"
+                          id="reg-password"
+                          name="password"
+                          autocomplete="new-password"
+                          required
+                        >
+                        <button
+                          type="button"
+                          class="btn btn-sm btn-outline-secondary position-absolute top-50 end-0 translate-middle-y me-2"
+                          id="register-password-toggle"
+                          aria-label="Show password"
+                          aria-pressed="false"
+                          onclick="togglePassword('reg-password','register-password-toggle')"
+                        >
+                          <i class="bi bi-eye" aria-hidden="true"></i>
+                        </button>
                     </div>
+
                     <button type="submit" class="btn btn-primary w-100">Register</button>
                 </form>
                 <p class="text-center mt-3">

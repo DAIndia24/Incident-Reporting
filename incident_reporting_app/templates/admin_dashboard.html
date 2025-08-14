@@ -17,16 +17,16 @@
     />
   </div>
 
-  <!-- Incident table with sortable headers -->
+  <!-- Incident table -->
   <table id="incidents-table" class="table table-striped table-hover">
     <thead>
       <tr>
-        <th scope="col" class="sortable" data-type="number">#</th>
-        <th scope="col" class="sortable" data-type="text">Department</th>
-        <th scope="col" class="sortable" data-type="text">Nature</th>
-        <th scope="col" class="sortable" data-type="text">Description</th>
-        <th scope="col" class="sortable" data-type="date">Submitted On</th>
-        <th scope="col" class="sortable" data-type="text">Status</th>
+        <th scope="col">#</th>
+        <th scope="col">Department</th>
+        <th scope="col">Nature</th>
+        <th scope="col">Description</th>
+        <th scope="col">Submitted On</th>
+        <th scope="col">Status</th>
         <th scope="col">Actions</th>
       </tr>
     </thead>
@@ -37,7 +37,9 @@
         <td>{{ incident.department }}</td>
         <td>{{ incident.nature }}</td>
         <td>
-          {{ incident.description[:50] if incident.description else 'N/A' }}…
+          <span title="{{ incident.description|e }}">
+            {{ incident.description[:50] if incident.description else 'N/A' }}…
+          </span>
           <button
             type="button"
             class="btn btn-link btn-sm view-details"
@@ -87,40 +89,6 @@
       });
   </script>
 
-  <!-- Sortable columns script -->
-  <script>
-    (() => {
-      const table = document.getElementById('incidents-table');
-      const headers = table.querySelectorAll('th.sortable');
-      headers.forEach((header, index) => {
-        header.style.cursor = 'pointer';
-        header.addEventListener('click', () => {
-          const type = header.dataset.type;
-          const tbody = table.tBodies[0];
-          const rows = Array.from(tbody.rows);
-          const asc = !header.classList.contains('asc');
-          rows.sort((a, b) => {
-            let aText = a.cells[index].innerText.trim();
-            let bText = b.cells[index].innerText.trim();
-            let cmp;
-            if (type === 'number') {
-              cmp = parseFloat(aText) - parseFloat(bText);
-            } else if (type === 'date') {
-              cmp = new Date(aText) - new Date(bText);
-            } else {
-              cmp = aText.localeCompare(bText);
-            }
-            return asc ? cmp : -cmp;
-          });
-          rows.forEach(row => tbody.appendChild(row));
-          headers.forEach(th => th.classList.remove('asc','desc'));
-          header.classList.toggle('asc', asc);
-          header.classList.toggle('desc', !asc);
-        });
-      });
-    })();
-  </script>
-
   <!-- View Details Modal -->
   <div
     class="modal fade"
@@ -161,8 +129,8 @@
     );
     document.querySelectorAll('.view-details').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.getElementById('modal-description').textContent =
-          btn.dataset.description;
+        const text = btn.dataset.description || '';
+        document.getElementById('modal-description').textContent = text;
         detailsModal.show();
       });
     });

@@ -8,15 +8,36 @@
         <div class="card mt-5">
             <div class="card-body">
                 <h2 class="card-title text-center mb-4">Login</h2>
-                <form method="POST">
+                <form method="POST" novalidate>
                     <div class="mb-3">
                         <label for="username" class="form-label">Username</label>
-                        <input type="text" class="form-control" id="username" name="username" required>
+                        <input type="text" class="form-control" id="username" name="username" autocomplete="username" required>
                     </div>
-                    <div class="mb-3">
+
+                    <div class="mb-3 position-relative">
                         <label for="password" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="password" name="password" required>
+                        <input
+                          type="password"
+                          class="form-control pe-5"
+                          id="password"
+                          name="password"
+                          autocomplete="current-password"
+                          required
+                          aria-describedby="passwordHelp"
+                        >
+                        <button
+                          type="button"
+                          class="btn btn-sm btn-outline-secondary position-absolute top-50 end-0 translate-middle-y me-2"
+                          id="login-password-toggle"
+                          aria-label="Show password"
+                          aria-pressed="false"
+                          onclick="togglePassword('password','login-password-toggle')"
+                        >
+                          <i class="bi bi-eye" aria-hidden="true"></i>
+                        </button>
+                        <div id="passwordHelp" class="form-text">Use a strong password to protect your account.</div>
                     </div>
+
                     <button type="submit" class="btn btn-primary w-100">Login</button>
                 </form>
                 <p class="text-center mt-3">
