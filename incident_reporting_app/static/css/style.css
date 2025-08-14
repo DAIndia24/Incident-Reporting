@@ -98,3 +98,74 @@ body.dark-mode {
 .dark-mode table td {
     border-top-color: #6c757d;
 }
+
+/* ================================
+   Password Toggle (Light + Dark)
+   ================================ */
+.password-toggle-btn {
+    background-color: rgba(0, 0, 0, 0.06);
+    color: #212529;
+    border: 1px solid rgba(0, 0, 0, 0.10);
+    line-height: 1;
+    z-index: 2;
+    transition: background-color .15s, color .15s, border-color .15s, box-shadow .15s;
+}
+
+.password-toggle-btn:hover,
+.password-toggle-btn:focus {
+    background-color: rgba(0, 0, 0, 0.12);
+    color: #212529;
+    border-color: rgba(0, 0, 0, 0.20);
+}
+
+.password-toggle-btn:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+
+.password-toggle-btn i {
+    pointer-events: none;
+}
+
+.dark-mode .password-toggle-btn {
+    background-color: rgba(255, 255, 255, 0.16);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.dark-mode .password-toggle-btn:hover,
+.dark-mode .password-toggle-btn:focus {
+    background-color: rgba(255, 255, 255, 0.28);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+/* Ensure input has space for the toggle if pe-5 not present */
+.has-password-toggle .form-control {
+    padding-right: 3rem;
+}
+
+/* ================================
+   Password Strength Meter
+   ================================ */
+.password-meter {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: .35rem;
+}
+.password-meter .meter-bar {
+    height: .5rem;
+    border-radius: .25rem;
+    background-color: #e9ecef; /* neutral */
+    transition: background-color .2s ease-in-out, transform .2s ease-in-out;
+}
+.password-meter.score-0 .meter-bar.filled { background-color: #dc3545; } /* red */
+.password-meter.score-1 .meter-bar.filled { background-color: #fd7e14; } /* orange */
+.password-meter.score-2 .meter-bar.filled { background-color: #ffc107; } /* yellow */
+.password-meter.score-3 .meter-bar.filled { background-color: #0d6efd; } /* blue */
+.password-meter.score-4 .meter-bar.filled { background-color: #198754; } /* green */
+
+/* Dark overrides: lighten neutrals, keep vivid hues readable */
+.dark-mode .password-meter .meter-bar {
+    background-color: rgba(255,255,255,0.18);
+}

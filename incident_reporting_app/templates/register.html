@@ -4,45 +4,83 @@
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-6 col-lg-4">
-        <div class="card mt-5">
-            <div class="card-body">
-                <h2 class="card-title text-center mb-4">Register</h2>
-                <form method="POST" novalidate>
-                    <div class="mb-3">
-                        <label for="reg-username" class="form-label">Username</label>
-                        <input type="text" class="form-control" id="reg-username" name="username" autocomplete="username" required>
-                    </div>
+  <div class="col-md-6 col-lg-5">
+    <div class="card mt-5">
+      <div class="card-body">
+        <h2 class="card-title text-center mb-4">Register</h2>
 
-                    <div class="mb-3 position-relative">
-                        <label for="reg-password" class="form-label">Password</label>
-                        <input
-                          type="password"
-                          class="form-control pe-5"
-                          id="reg-password"
-                          name="password"
-                          autocomplete="new-password"
-                          required
-                        >
-                        <button
-                          type="button"
-                          class="btn btn-sm btn-outline-secondary position-absolute top-50 end-0 translate-middle-y me-2"
-                          id="register-password-toggle"
-                          aria-label="Show password"
-                          aria-pressed="false"
-                          onclick="togglePassword('reg-password','register-password-toggle')"
-                        >
-                          <i class="bi bi-eye" aria-hidden="true"></i>
-                        </button>
-                    </div>
+        <form method="POST" novalidate>
+          <div class="mb-3">
+            <label for="reg-username" class="form-label">Username</label>
+            <input type="text" class="form-control" id="reg-username" name="username"
+                   autocomplete="username" required>
+          </div>
 
-                    <button type="submit" class="btn btn-primary w-100">Register</button>
-                </form>
-                <p class="text-center mt-3">
-                    Already have an account? <a href="{{ url_for('login') }}">Login here</a>
-                </p>
-            </div>
-        </div>
+          <div class="mb-2 position-relative has-password-toggle">
+            <label for="reg-password" class="form-label">Password</label>
+            <input
+              type="password"
+              class="form-control pe-5"
+              id="reg-password"
+              name="password"
+              autocomplete="new-password"
+              required
+            >
+            <button
+              type="button"
+              class="btn btn-sm password-toggle-btn position-absolute top-50 end-0 translate-middle-y me-2"
+              id="register-password-toggle"
+              aria-label="Show password"
+              aria-pressed="false"
+              onclick="togglePassword('reg-password','register-password-toggle')"
+            >
+              <i class="bi bi-eye" aria-hidden="true"></i>
+              <span class="visually-hidden">Toggle password visibility</span>
+            </button>
+          </div>
+
+          <!-- Strength Meter -->
+          <div class="password-meter my-2" id="pw-meter" aria-hidden="false">
+            <div class="meter-bar"></div>
+            <div class="meter-bar"></div>
+            <div class="meter-bar"></div>
+            <div class="meter-bar"></div>
+          </div>
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <small class="text-muted">Password strength:</small>
+            <small id="pw-label" class="fw-semibold">Very weak</small>
+          </div>
+
+          <!-- Suggestions -->
+          <div class="mb-3">
+            <small class="text-muted d-block mb-1">Recommendations:</small>
+            <ul id="pw-suggestions" class="mb-0 ps-3 small"></ul>
+          </div>
+
+          <button id="register-submit" type="submit" class="btn btn-primary w-100">
+            Register
+          </button>
+          <small class="form-text text-muted d-block mt-2">
+            Tip: Use at least 12 characters and mix UPPER/lowercase, numbers, and symbols.
+          </small>
+        </form>
+      </div>
     </div>
+  </div>
 </div>
+
+<!-- Initialize strength UI (minScore: 2 = OK; set to 3 for stricter “Good”) -->
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    initPasswordStrength({
+      inputId: 'reg-password',
+      usernameId: 'reg-username',
+      barsSelector: '#pw-meter',
+      labelSelector: '#pw-label',
+      listSelector: '#pw-suggestions',
+      submitId: 'register-submit',
+      minScore: 2
+    });
+  });
+</script>
 {% endblock %}
