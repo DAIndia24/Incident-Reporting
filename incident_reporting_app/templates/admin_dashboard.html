@@ -1,7 +1,5 @@
 {% extends "base.html" %}
-
 {% block title %}Admin Dashboard{% endblock %}
-
 {% block content %}
 <h2 class="mb-4">Incident Reports</h2>
 
@@ -9,15 +7,9 @@
 <div class="table-responsive">
   <!-- Search filter -->
   <div class="mb-3">
-    <input
-      type="text"
-      id="incident-search"
-      class="form-control"
-      placeholder="Search incidents…"
-    />
+    <input type="text" id="incident-search" class="form-control" placeholder="Search incidents…">
   </div>
 
-  <!-- Incident table -->
   <table id="incidents-table" class="table table-striped table-hover">
     <thead>
       <tr>
@@ -25,6 +17,7 @@
         <th scope="col">Department</th>
         <th scope="col">Nature</th>
         <th scope="col">Description</th>
+        <th scope="col">Submitted By</th>
         <th scope="col">Submitted On</th>
         <th scope="col">Status</th>
         <th scope="col">Actions</th>
@@ -37,15 +30,14 @@
         <td>{{ incident.department }}</td>
         <td>{{ incident.nature }}</td>
         <td>
-          {{ incident.description[:50] if incident.description else 'N/A' }}…
-          <button
-            type="button"
-            class="btn btn-link btn-sm view-details"
-            data-description="{{ incident.description|e }}"
-          >
+          <span title="{{ incident.description|e }}">
+            {{ incident.description[:50] if incident.description else 'N/A' }}…
+          </span>
+          <button type="button" class="btn btn-link btn-sm view-details" data-description="{{ incident.description|e }}">
             View Details
           </button>
         </td>
+        <td>{{ incident.user.username if incident.user else 'Anonymous' }}</td>
         <td>{{ incident.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
         <td>
           <span class="badge
@@ -74,70 +66,44 @@
 
   <!-- Search filter script -->
   <script>
-    document
-      .getElementById('incident-search')
-      .addEventListener('keyup', function () {
-        const filter = this.value.toLowerCase();
-        document
-          .querySelectorAll('#incidents-table tbody tr')
-          .forEach(row => {
-            const text = row.textContent.toLowerCase();
-            row.style.display = text.includes(filter) ? '' : 'none';
-          });
+    document.getElementById('incident-search').addEventListener('keyup', function () {
+      const filter = this.value.toLowerCase();
+      document.querySelectorAll('#incidents-table tbody tr').forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(filter) ? '' : 'none';
       });
+    });
   </script>
 
   <!-- View Details Modal -->
-  <div
-    class="modal fade"
-    id="detailsModal"
-    tabindex="-1"
-    aria-labelledby="detailsModalLabel"
-    aria-hidden="true"
-  >
+  <div class="modal fade" id="detailsModal" tabindex="-1" aria-labelledby="detailsModalLabel" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title" id="detailsModalLabel">Incident Details</h5>
-          <button
-            type="button"
-            class="btn-close"
-            data-bs-dismiss="modal"
-            aria-label="Close"
-          ></button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body" id="modal-description"></div>
         <div class="modal-footer">
-          <button
-            type="button"
-            class="btn btn-secondary"
-            data-bs-dismiss="modal"
-          >
-            Close
-          </button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Modal wiring script -->
+  <!-- Modal wiring -->
   <script>
-    const detailsModal = new bootstrap.Modal(
-      document.getElementById('detailsModal')
-    );
+    const detailsModal = new bootstrap.Modal(document.getElementById('detailsModal'));
     document.querySelectorAll('.view-details').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.getElementById('modal-description').textContent =
-          btn.dataset.description;
+        const text = btn.dataset.description || '';
+        document.getElementById('modal-description').textContent = text;
         detailsModal.show();
       });
     });
   </script>
 </div>
-
 {% else %}
-<div class="alert alert-info" role="alert">
-  No incident reports to display.
-</div>
+<div class="alert alert-info" role="alert">No incident reports to display.</div>
 {% endif %}
 {% endblock %}
