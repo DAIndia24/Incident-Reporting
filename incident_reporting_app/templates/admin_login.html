@@ -1,47 +1,36 @@
 {% extends "base.html" %}
-
 {% block title %}Admin Login{% endblock %}
-
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-6 col-lg-4">
-        <div class="card mt-5">
-            <div class="card-body">
-                <h2 class="card-title text-center mb-4">Administrator Login</h2>
-                <form method="POST" novalidate>
-                    <div class="mb-3">
-                        <label for="admin-username" class="form-label">Admin Username</label>
-                        <input type="text" class="form-control" id="admin-username" name="username"
-                               autocomplete="username" required>
-                    </div>
+  <div class="col-md-6 col-lg-4">
+    <div class="card mt-5">
+      <div class="card-body">
+        <h2 class="card-title text-center mb-4">Administrator Login</h2>
+        <form method="POST" novalidate>
+          <div class="mb-3">
+            <label for="admin-username" class="form-label">Admin Username</label>
+            <input type="text" class="form-control" id="admin-username" name="username" autocomplete="username" required>
+          </div>
 
-                    <div class="mb-3 position-relative">
-                        <label for="admin-password" class="form-label">Admin Password</label>
-                        <input
-                          type="password"
-                          class="form-control pe-5"
-                          id="admin-password"
-                          name="password"
-                          autocomplete="current-password"
-                          required
-                        >
-                        <button
-                          type="button"
-                          class="btn btn-sm password-toggle-btn position-absolute top-50 end-0 translate-middle-y me-2"
-                          id="admin-password-toggle"
-                          aria-label="Show password"
-                          aria-pressed="false"
-                          onclick="togglePassword('admin-password','admin-password-toggle')"
-                        >
-                          <i class="bi bi-eye" aria-hidden="true"></i>
-                          <span class="visually-hidden">Toggle password visibility</span>
-                        </button>
-                    </div>
+          <div class="mb-3 position-relative has-password-toggle">
+            <label for="admin-password" class="form-label">Admin Password</label>
+            <input type="password" class="form-control pe-5" id="admin-password" name="password"
+                   autocomplete="current-password" required>
+            <button type="button"
+                    class="btn btn-sm password-toggle-btn position-absolute top-50 end-0 translate-middle-y me-2"
+                    id="admin-password-toggle"
+                    aria-label="Show password"
+                    aria-pressed="false"
+                    onclick="togglePassword('admin-password','admin-password-toggle')">
+              <i class="bi bi-eye" aria-hidden="true"></i>
+              <span class="visually-hidden">Toggle password visibility</span>
+            </button>
+          </div>
 
-                    <button type="submit" class="btn btn-primary w-100">Login as Admin</button>
-                </form>
-            </div>
-        </div>
+          <button type="submit" class="btn btn-primary w-100">Login as Admin</button>
+        </form>
+      </div>
     </div>
+  </div>
 </div>
 {% endblock %}

@@ -1,57 +1,58 @@
 {% extends "base.html" %}
-
 {% block title %}Report Incident{% endblock %}
-
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-8 col-lg-6">
-        <div class="card mt-5">
-            <div class="card-body">
-                <h2 class="card-title text-center mb-4">Submit Incident Report</h2>
-                <p class="text-muted text-center">Your report will be anonymous.</p>
-                <form method="POST">
-                    <div class="mb-3">
-                        <label for="department" class="form-label">Department Involved</label>
-                        <select class="form-select" id="department" name="department" required>
-                            <option value="">Select Department</option>
-                            <option value="Human Resources">Human Resources</option>
-                            <option value="IT Department">IT Department</option>
-                            <option value="Finance">Finance</option>
-                            <option value="Operations">Operations</option>
-                            <option value="Customer Service">Customer Service</option>
-                            <option value="Marketing">Marketing</option>
-                            <option value="Sales">Sales</option>
-                            <option value="Data Engineering">Data Engineering</option>
-                            <option value="Data Cleaning">Data Cleaning</option>
-                            <option value="Compliance">Compliance</option>
-                            <option value="Data Collection">Data Collection</option>
-                            <option value="Other">Other</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="nature" class="form-label">Nature of Incident</label>
-                        <select class="form-select" id="nature" name="nature" required>
-                            <option value="">Select Nature</option>
-                            <option value="Harassment">Harassment</option>
-                            <option value="Discrimination">Discrimination</option>
-                            <option value="Security Breach">Security Breach</option>
-                            <option value="Data Loss">Data Loss</option>
-                            <option value="Fraud">Fraud</option>
-                            <option value="Workplace Accident">Workplace Accident</option>
-                            <option value="IT Issue">IT Issue</option>
-                            <option value="Equipment Malfunction">Equipment Malfunction</option>
-                            <option value="Policy Violation">Policy Violation</option>
-                            <option value="Other">Other</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="description" class="form-label">Description of Incident (Optional)</label>
-                        <textarea class="form-control" id="description" name="description" rows="5"></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-primary w-100">Submit Report</button>
-                </form>
-            </div>
-        </div>
+  <div class="col-md-8 col-lg-6">
+    <div class="card mt-5">
+      <div class="card-body">
+        <h2 class="card-title text-center mb-4">Submit Incident Report</h2>
+        <p class="text-muted text-center">Your report will be anonymous.</p>
+        <form method="POST">
+          <div class="mb-3">
+            <label for="department" class="form-label">Department Involved</label>
+            <select class="form-select" id="department" name="department" required>
+              <option value="">Select Department</option>
+              <option value="Human Resources">Human Resources</option>
+              <option value="IT Department">IT Department</option>
+              <option value="Finance">Finance</option>
+              <option value="Operations">Operations</option>
+              <option value="Customer Service">Customer Service</option>
+              <option value="Marketing">Marketing</option>
+              <option value="Sales">Sales</option>
+              <option value="Data Engineering">Data Engineering</option>
+              <option value="Data Cleaning">Data Cleaning</option>
+              <option value="Compliance">Compliance</option>
+              <option value="Data Collection">Data Collection</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label for="nature" class="form-label">Nature of Incident</label>
+            <select class="form-select" id="nature" name="nature" required>
+              <option value="">Select Nature</option>
+              <option value="Harassment">Harassment</option>
+              <option value="Discrimination">Discrimination</option>
+              <option value="Security Breach">Security Breach</option>
+              <option value="Data Loss">Data Loss</option>
+              <option value="Fraud">Fraud</option>
+              <option value="Workplace Accident">Workplace Accident</option>
+              <option value="IT Issue">IT Issue</option>
+              <option value="Equipment Malfunction">Equipment Malfunction</option>
+              <option value="Policy Violation">Policy Violation</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label for="description" class="form-label">Description of Incident (Optional)</label>
+            <textarea class="form-control" id="description" name="description" rows="5"></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-primary w-100">Submit Report</button>
+        </form>
+      </div>
     </div>
+  </div>
 </div>
 {% endblock %}

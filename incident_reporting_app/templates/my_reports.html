@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}My Reports{% endblock %}
+{% block content %}
+<h2 class="mb-4">My Submitted Reports</h2>
+
+{% if incidents %}
+<div class="table-responsive">
+  <table class="table table-striped table-hover">
+    <thead>
+      <tr>
+        <th scope="col">#</th>
+        <th scope="col">Department</th>
+        <th scope="col">Nature</th>
+        <th scope="col">Description</th>
+        <th scope="col">Submitted On</th>
+        <th scope="col">Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for incident in incidents %}
+      <tr>
+        <th scope="row">{{ incident.id }}</th>
+        <td>{{ incident.department }}</td>
+        <td>{{ incident.nature }}</td>
+        <td>{{ incident.description if incident.description else 'N/A' }}</td>
+        <td>{{ incident.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td>
+          <span class="badge
+            {% if incident.status == 'Pending' %}bg-warning
+            {% elif incident.status == 'In Progress' %}bg-info
+            {% elif incident.status == 'Resolved' %}bg-success
+            {% else %}bg-secondary{% endif %}">
+            {{ incident.status }}
+          </span>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="alert alert-info" role="alert">You have not submitted any reports yet.</div>
+{% endif %}
+{% endblock %}
