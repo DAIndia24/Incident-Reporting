@@ -66,7 +66,7 @@ class Incident(db.Model):
 # Lightweight migration helpers (SQLite-friendly)
 # -----------------------------------------------------------------------------
 def column_exists_sqlite(table: str, column: str) -> bool:
-    engine = db.get_engine()
+    engine = db.engine
     if not engine.url.drivername.startswith("sqlite"):
         return True
     with engine.connect() as conn:
@@ -75,7 +75,7 @@ def column_exists_sqlite(table: str, column: str) -> bool:
         return column in cols
 
 def add_ticket_column_if_missing():
-    engine = db.get_engine()
+    engine = db.engine  # updated: deprecated db.get_engine() -> db.engine
     if engine.url.drivername.startswith("sqlite") and not column_exists_sqlite('incidents', 'ticket_code'):
         with engine.connect() as conn:
             conn.exec_driver_sql('ALTER TABLE incidents ADD COLUMN ticket_code VARCHAR(32);')
@@ -171,7 +171,8 @@ def verify_reset_token(token: str, max_age_seconds: int = 3600) -> Optional[User
         uid = data.get('uid')
         if not uid:
             return None
-        return User.query.get(uid)
+        # updated: Model.query.get -> db.session.get
+        return db.session.get(User, uid)
     except SignatureExpired:
         return None
     except BadSignature:
@@ -247,7 +248,7 @@ def logout():
 def admin_login():
     if request.method == 'POST':
         username = (request.form.get('username') or '').strip()
-        password = request.form.get('password') or ''
+        password = (request.form.get('password') or '')
         user = User.query.filter_by(username=username, is_admin=True).first()
         if not user or not user.check_password(password):
             flash('Invalid admin credentials.', 'danger')
@@ -268,7 +269,8 @@ def admin_dashboard():
         if not incident_id or not status:
             flash('Invalid update request.', 'danger')
             return redirect(url_for('admin_dashboard'))
-        incident = Incident.query.get(incident_id)
+        # updated: Incident.query.get -> db.session.get
+        incident = db.session.get(Incident, int(incident_id)) if incident_id else None
         if not incident:
             flash('Incident not found.', 'warning')
             return redirect(url_for('admin_dashboard'))
