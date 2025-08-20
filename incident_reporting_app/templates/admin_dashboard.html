@@ -5,7 +5,6 @@
 
 {% if incidents %}
 <div class="table-responsive">
-  <!-- Search filter -->
   <div class="mb-3">
     <input type="text" id="incident-search" class="form-control" placeholder="Search incidents…">
   </div>
@@ -14,6 +13,7 @@
     <thead>
       <tr>
         <th scope="col">#</th>
+        <th scope="col">Ticket</th>
         <th scope="col">Department</th>
         <th scope="col">Nature</th>
         <th scope="col">Description</th>
@@ -27,6 +27,14 @@
       {% for incident in incidents %}
       <tr>
         <th scope="row">{{ incident.id }}</th>
+        <td>
+          {% if incident.ticket_code %}
+            <a href="{{ url_for('ticket_status', ticket_code=incident.ticket_code) }}">{{ incident.ticket_code }}</a>
+            <a class="ms-2 btn btn-sm btn-outline-secondary" href="{{ url_for('ticket_pdf', ticket_code=incident.ticket_code) }}">PDF</a>
+          {% else %}
+            <span class="text-muted">—</span>
+          {% endif %}
+        </td>
         <td>{{ incident.department }}</td>
         <td>{{ incident.nature }}</td>
         <td>
@@ -64,7 +72,6 @@
     </tbody>
   </table>
 
-  <!-- Search filter script -->
   <script>
     document.getElementById('incident-search').addEventListener('keyup', function () {
       const filter = this.value.toLowerCase();
@@ -73,9 +80,17 @@
         row.style.display = text.includes(filter) ? '' : 'none';
       });
     });
+
+    const detailsModal = new bootstrap.Modal(document.getElementById('detailsModal'));
+    document.querySelectorAll('.view-details').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const text = btn.dataset.description || '';
+        document.getElementById('modal-description').textContent = text;
+        detailsModal.show();
+      });
+    });
   </script>
 
-  <!-- View Details Modal -->
   <div class="modal fade" id="detailsModal" tabindex="-1" aria-labelledby="detailsModalLabel" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
@@ -90,18 +105,6 @@
       </div>
     </div>
   </div>
-
-  <!-- Modal wiring -->
-  <script>
-    const detailsModal = new bootstrap.Modal(document.getElementById('detailsModal'));
-    document.querySelectorAll('.view-details').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const text = btn.dataset.description || '';
-        document.getElementById('modal-description').textContent = text;
-        detailsModal.show();
-      });
-    });
-  </script>
 </div>
 {% else %}
 <div class="alert alert-info" role="alert">No incident reports to display.</div>

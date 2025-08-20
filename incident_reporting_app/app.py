@@ -1,10 +1,13 @@
 import os
+import random
+import string
 from datetime import datetime
 from functools import wraps
+from typing import Optional
 
 from flask import (
     Flask, render_template, request, redirect, url_for,
-    flash, session
+    flash, session, send_file, abort
 )
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -45,6 +48,9 @@ class User(db.Model):
 class Incident(db.Model):
     __tablename__ = 'incidents'
     id = db.Column(db.Integer, primary_key=True)
+    # NEW: public-facing ticket code (unique-ish, app-enforced)
+    ticket_code = db.Column(db.String(32), nullable=True, index=True)
+
     department = db.Column(db.String(120), nullable=False)
     nature = db.Column(db.String(120), nullable=False)
     description = db.Column(db.Text, nullable=True)
@@ -54,9 +60,32 @@ class Incident(db.Model):
     # Nullable for anonymous reports
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
 
+# -----------------------------------------------------------------------------
+# Lightweight migration helpers (SQLite-friendly)
+# -----------------------------------------------------------------------------
+def column_exists_sqlite(table: str, column: str) -> bool:
+    engine = db.get_engine()
+    if not engine.url.drivername.startswith("sqlite"):
+        # For non-sqlite, assume migrations are handled properly.
+        return True
+    with engine.connect() as conn:
+        res = conn.exec_driver_sql(f'PRAGMA table_info({table});').fetchall()
+        cols = [r[1] for r in res]
+        return column in cols
+
+def add_ticket_column_if_missing():
+    """For dev convenience: add ticket_code to incidents if missing (SQLite)."""
+    engine = db.get_engine()
+    if engine.url.drivername.startswith("sqlite") and not column_exists_sqlite('incidents', 'ticket_code'):
+        with engine.connect() as conn:
+            conn.exec_driver_sql('ALTER TABLE incidents ADD COLUMN ticket_code VARCHAR(32);')
+        # backfill existing rows
+        for inc in Incident.query.filter(Incident.ticket_code.is_(None)).all():
+            inc.ticket_code = generate_unique_ticket()
+        db.session.commit()
 
 # -----------------------------------------------------------------------------
-# Helpers / Decorators
+# Auth / decorators
 # -----------------------------------------------------------------------------
 def login_required(view):
     @wraps(view)
@@ -67,7 +96,6 @@ def login_required(view):
         return view(*args, **kwargs)
     return wrapped
 
-
 def admin_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
@@ -77,10 +105,12 @@ def admin_required(view):
         return view(*args, **kwargs)
     return wrapped
 
-
-def ensure_db_seed_admin():
-    """Create tables and seed a default admin (one-time) if none exists."""
+# -----------------------------------------------------------------------------
+# Seed admin (dev convenience)
+# -----------------------------------------------------------------------------
+def ensure_db_and_seed():
     db.create_all()
+    add_ticket_column_if_missing()
     if not User.query.filter_by(is_admin=True).first():
         admin = User(username='admin', email=None, is_admin=True)
         admin.set_password('ChangeMe123!')
@@ -88,12 +118,10 @@ def ensure_db_seed_admin():
         db.session.commit()
         print('[seed] Created default admin: username="admin" password="ChangeMe123!"')
 
-
 # -----------------------------------------------------------------------------
-# Password strength (basic server-side sanity to complement client checks)
+# Password sanity (server-side)
 # -----------------------------------------------------------------------------
 def is_password_reasonable(pw: str, username: str = '') -> bool:
-    """Very light sanity check; client-side does the rich guidance."""
     if not pw or len(pw) < 8:
         return False
     lower = any(c.islower() for c in pw)
@@ -102,11 +130,33 @@ def is_password_reasonable(pw: str, username: str = '') -> bool:
     special = any(not c.isalnum() for c in pw)
     if sum([lower, upper, digit, special]) < 2:
         return False
-    # avoid trivial username-in-password
     if username and username.lower() in pw.lower():
         return False
     return True
 
+# -----------------------------------------------------------------------------
+# Ticket generation & lookup
+# -----------------------------------------------------------------------------
+def generate_ticket_code(date: Optional[datetime] = None, suffix_len: int = 4) -> str:
+    """
+    Format: IR-YYYYMMDD-XXXX where XXXX is hex-like uppercase.
+    """
+    d = (date or datetime.utcnow()).strftime("%Y%m%d")
+    suffix = ''.join(random.choices(string.hexdigits.upper().replace('G', ''), k=suffix_len))
+    return f"IR-{d}-{suffix}"
+
+def generate_unique_ticket(max_attempts: int = 10) -> str:
+    for _ in range(max_attempts):
+        code = generate_ticket_code()
+        if not Incident.query.filter_by(ticket_code=code).first():
+            return code
+    # Fallback: include seconds to reduce collision
+    return generate_ticket_code(suffix_len=6)
+
+def get_incident_by_ticket(ticket_code: str) -> Optional[Incident]:
+    if not ticket_code:
+        return None
+    return Incident.query.filter_by(ticket_code=ticket_code).first()
 
 # -----------------------------------------------------------------------------
 # Routes
@@ -115,15 +165,8 @@ def is_password_reasonable(pw: str, username: str = '') -> bool:
 def index():
     return render_template('index.html')
 
-
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    """
-    Client-side already enforces:
-      - strength meter (min score)
-      - confirm password match
-    We still validate server-side for security.
-    """
     if request.method == 'POST':
         username = (request.form.get('username') or '').strip()
         password = request.form.get('password') or ''
@@ -150,7 +193,6 @@ def register():
         db.session.add(user)
         db.session.commit()
 
-        # Log them in
         session['user_id'] = user.id
         session['is_admin'] = user.is_admin
         flash('Registration successful. Welcome!', 'success')
@@ -158,13 +200,8 @@ def register():
 
     return render_template('register.html')
 
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    """
-    Regular user login (non-admin).
-    Admins can also use this, but we have a separate /admin/login page too.
-    """
     if request.method == 'POST':
         username = (request.form.get('username') or '').strip()
         password = request.form.get('password') or ''
@@ -176,13 +213,10 @@ def login():
         session['user_id'] = user.id
         session['is_admin'] = user.is_admin
         flash('Logged in successfully.', 'success')
-        # If admin, nudge to dashboard; else to home
         if user.is_admin:
             return redirect(url_for('admin_dashboard'))
         return redirect(url_for('index'))
-
     return render_template('login.html')
-
 
 @app.route('/logout')
 def logout():
@@ -190,12 +224,8 @@ def logout():
     flash('You have been logged out.', 'info')
     return redirect(url_for('index'))
 
-
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
-    """
-    Admin-only login page (uses same user table, but enforces is_admin).
-    """
     if request.method == 'POST':
         username = (request.form.get('username') or '').strip()
         password = request.form.get('password') or ''
@@ -208,16 +238,11 @@ def admin_login():
         session['is_admin'] = True
         flash('Welcome, Admin.', 'success')
         return redirect(url_for('admin_dashboard'))
-
     return render_template('admin_login.html')
-
 
 @app.route('/admin/dashboard', methods=['GET', 'POST'])
 @admin_required
 def admin_dashboard():
-    """
-    Shows all incidents; admin can update status via POST.
-    """
     if request.method == 'POST':
         incident_id = request.form.get('incident_id')
         status = request.form.get('status')
@@ -229,6 +254,9 @@ def admin_dashboard():
             flash('Incident not found.', 'warning')
             return redirect(url_for('admin_dashboard'))
         incident.status = status
+        # ensure legacy rows have tickets
+        if not incident.ticket_code:
+            incident.ticket_code = generate_unique_ticket()
         db.session.commit()
         flash(f'Incident #{incident.id} updated to "{status}".', 'success')
         return redirect(url_for('admin_dashboard'))
@@ -236,11 +264,11 @@ def admin_dashboard():
     incidents = Incident.query.order_by(Incident.timestamp.desc()).all()
     return render_template('admin_dashboard.html', incidents=incidents)
 
-
 @app.route('/report', methods=['GET', 'POST'])
 def report_incident():
     """
-    Allow anonymous reports (no user_id) or associate with logged-in user.
+    Anonymous or authenticated report creation.
+    Generates a unique ticket and redirects to public ticket page.
     """
     if request.method == 'POST':
         department = (request.form.get('department') or '').strip()
@@ -251,30 +279,25 @@ def report_incident():
             flash('Department and Nature are required.', 'danger')
             return render_template('report.html')
 
+        ticket_code = generate_unique_ticket()
         inc = Incident(
             department=department,
             nature=nature,
             description=description or None,
-            user_id=session.get('user_id')  # None if anonymous
+            user_id=session.get('user_id'),
+            ticket_code=ticket_code
         )
         db.session.add(inc)
         db.session.commit()
-        flash('Incident submitted successfully.', 'success')
-        # If admin is submitting, go back to dashboard; else home
-        if session.get('is_admin'):
-            return redirect(url_for('admin_dashboard'))
-        return redirect(url_for('index'))
+
+        flash(f'Incident submitted. Your ticket: {ticket_code}', 'success')
+        return redirect(url_for('ticket_status', ticket_code=ticket_code))
 
     return render_template('report.html')
-
 
 @app.route('/my-reports')
 @login_required
 def my_reports():
-    """
-    Non-admin users can view their own submitted incidents.
-    Admins should use the dashboard.
-    """
     if session.get('is_admin'):
         flash('Admins can review all reports on the dashboard.', 'info')
         return redirect(url_for('admin_dashboard'))
@@ -283,27 +306,99 @@ def my_reports():
     incidents = Incident.query.filter_by(user_id=user_id).order_by(Incident.timestamp.desc()).all()
     return render_template('my_reports.html', incidents=incidents)
 
+@app.route('/ticket/<ticket_code>')
+def ticket_status(ticket_code):
+    """
+    Public status page for a ticket (no auth required).
+    """
+    inc = get_incident_by_ticket(ticket_code)
+    if not inc:
+        flash('Ticket not found.', 'warning')
+        return redirect(url_for('index'))
+    return render_template('ticket.html', incident=inc)
+
+@app.route('/ticket/<ticket_code>/pdf')
+def ticket_pdf(ticket_code):
+    """
+    Generate a simple PDF report for the incident (public).
+    Requires 'reportlab'. If unavailable, 501 Not Implemented.
+    """
+    inc = get_incident_by_ticket(ticket_code)
+    if not inc:
+        flash('Ticket not found.', 'warning')
+        return redirect(url_for('index'))
+
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.units import mm
+        from reportlab.pdfgen import canvas
+        from io import BytesIO
+
+        buf = BytesIO()
+        c = canvas.Canvas(buf, pagesize=A4)
+        width, height = A4
+
+        def draw_line(y): c.line(20*mm, y, (width-20*mm), y)
+
+        y = height - 30*mm
+        c.setFont("Helvetica-Bold", 16); c.drawString(20*mm, y, "Incident Report Ticket"); y -= 10*mm
+        c.setFont("Helvetica", 11)
+
+        fields = [
+            ("Ticket", inc.ticket_code or ""),
+            ("Internal ID", str(inc.id)),
+            ("Department", inc.department),
+            ("Nature", inc.nature),
+            ("Status", inc.status),
+            ("Submitted On (UTC)", inc.timestamp.strftime("%Y-%m-%d %H:%M:%S")),
+            ("Submitted By", inc.user.username if inc.user else "Anonymous"),
+        ]
+        for label, value in fields:
+            c.drawString(20*mm, y, f"{label}: {value}")
+            y -= 8*mm
+
+        draw_line(y); y -= 8*mm
+        c.setFont("Helvetica-Bold", 12); c.drawString(20*mm, y, "Description"); y -= 8*mm
+        c.setFont("Helvetica", 11)
+        text = c.beginText(20*mm, y)
+        desc = inc.description or "N/A"
+        for line in desc.splitlines() or ["N/A"]:
+            text.textLine(line[:120])
+        c.drawText(text)
+
+        c.showPage(); c.save()
+        buf.seek(0)
+        filename = f"{inc.ticket_code}.pdf" if inc.ticket_code else f"incident-{inc.id}.pdf"
+        return send_file(buf, as_attachment=True, download_name=filename, mimetype="application/pdf")
+
+    except Exception as e:
+        # If reportlab not available or another failure
+        print("[ticket_pdf] PDF generation unavailable:", e)
+        abort(501, description="PDF generation not available on this server.")
 
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
-    """
-    Minimal placeholder to resolve BuildError.
-    For security, we do not reveal whether an email/username exists.
-    Extend later with email + token-based reset.
-    """
     if request.method == 'POST':
-        # You can accept either email or username. For now, just take email.
         email = (request.form.get('email') or '').strip()
-        # TODO: Look up user & send reset link with a signed token.
+        # TODO: implement email reset tokens
         flash('If an account with that email exists, a reset link has been sent.', 'info')
         return redirect(url_for('login'))
     return render_template('forgot_password.html')
 
+# -----------------------------------------------------------------------------
+# Optional: harden some headers quickly
+# -----------------------------------------------------------------------------
+@app.after_request
+def set_headers(resp):
+    resp.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    resp.headers['X-Content-Type-Options'] = 'nosniff'
+    resp.headers['X-Frame-Options'] = 'DENY'
+    return resp
 
 # -----------------------------------------------------------------------------
 # Entrypoint
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
     with app.app_context():
-        ensure_db_seed_admin()
+        ensure_db_and_seed()
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=True)
