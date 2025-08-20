@@ -1,5 +1,7 @@
 {% extends "base.html" %}
+
 {% block title %}Register{% endblock %}
+
 {% block content %}
 <div class="row justify-content-center">
   <div class="col-md-6 col-lg-5">
@@ -8,15 +10,32 @@
         <h2 class="card-title text-center mb-4">Register</h2>
 
         <form method="POST" novalidate>
+          <!-- Username -->
           <div class="mb-3">
             <label for="reg-username" class="form-label">Username</label>
-            <input type="text" class="form-control" id="reg-username" name="username" autocomplete="username" required>
+            <input
+              type="text"
+              class="form-control"
+              id="reg-username"
+              name="username"
+              autocomplete="username"
+              required
+            >
           </div>
 
+          <!-- Password (no toggle) -->
           <div class="mb-2">
             <label for="reg-password" class="form-label">Password</label>
-            <input type="password" class="form-control" id="reg-password" name="password"
-                   autocomplete="new-password" required>
+            <div class="input-group">
+              <input
+                type="password"
+                class="form-control"
+                id="reg-password"
+                name="password"
+                autocomplete="new-password"
+                required
+              >
+            </div>
           </div>
 
           <!-- Strength Meter -->
@@ -31,11 +50,20 @@
             <small id="pw-label" class="fw-semibold">Very weak</small>
           </div>
 
-          <!-- Confirm Password -->
+          <!-- Confirm Password (no toggle) -->
           <div class="mb-2">
             <label for="reg-password-confirm" class="form-label">Confirm Password</label>
-            <input type="password" class="form-control" id="reg-password-confirm" name="password_confirm"
-                   autocomplete="new-password" required aria-describedby="confirmHelp">
+            <div class="input-group">
+              <input
+                type="password"
+                class="form-control"
+                id="reg-password-confirm"
+                name="password_confirm"
+                autocomplete="new-password"
+                required
+                aria-describedby="confirmHelp"
+              >
+            </div>
             <div id="confirmHelp" class="invalid-feedback" aria-live="polite"></div>
           </div>
 
@@ -45,7 +73,10 @@
             <ul id="pw-suggestions" class="mb-0 ps-3 small"></ul>
           </div>
 
-          <button id="register-submit" type="submit" class="btn btn-primary w-100" disabled>Register</button>
+          <!-- Submit -->
+          <button id="register-submit" type="submit" class="btn btn-primary w-100" disabled>
+            Register
+          </button>
           <small class="form-text text-muted d-block mt-2">
             Tip: Use at least 12 characters and mix UPPER/lowercase, numbers, and symbols.
           </small>
@@ -55,6 +86,7 @@
   </div>
 </div>
 
+<!-- Initialize strength UI + confirm-match -->
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     const strengthRef = initPasswordStrength({
