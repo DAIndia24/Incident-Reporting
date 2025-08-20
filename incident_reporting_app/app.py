@@ -12,6 +12,9 @@ from flask import (
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 
+# NEW: token signing for password reset
+from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
+
 # -----------------------------------------------------------------------------
 # App / DB setup
 # -----------------------------------------------------------------------------
@@ -22,6 +25,9 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
     'sqlite:///incident_reporting.db'
 )
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Show reset link in flash when app.debug=True (dev convenience)
+SHOW_RESET_LINK_IN_DEV = True
 
 db = SQLAlchemy(app)
 
@@ -48,16 +54,12 @@ class User(db.Model):
 class Incident(db.Model):
     __tablename__ = 'incidents'
     id = db.Column(db.Integer, primary_key=True)
-    # NEW: public-facing ticket code (unique-ish, app-enforced)
     ticket_code = db.Column(db.String(32), nullable=True, index=True)
-
     department = db.Column(db.String(120), nullable=False)
     nature = db.Column(db.String(120), nullable=False)
     description = db.Column(db.Text, nullable=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     status = db.Column(db.String(32), default='Pending', nullable=False)
-
-    # Nullable for anonymous reports
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
 
 # -----------------------------------------------------------------------------
@@ -66,7 +68,6 @@ class Incident(db.Model):
 def column_exists_sqlite(table: str, column: str) -> bool:
     engine = db.get_engine()
     if not engine.url.drivername.startswith("sqlite"):
-        # For non-sqlite, assume migrations are handled properly.
         return True
     with engine.connect() as conn:
         res = conn.exec_driver_sql(f'PRAGMA table_info({table});').fetchall()
@@ -74,12 +75,10 @@ def column_exists_sqlite(table: str, column: str) -> bool:
         return column in cols
 
 def add_ticket_column_if_missing():
-    """For dev convenience: add ticket_code to incidents if missing (SQLite)."""
     engine = db.get_engine()
     if engine.url.drivername.startswith("sqlite") and not column_exists_sqlite('incidents', 'ticket_code'):
         with engine.connect() as conn:
             conn.exec_driver_sql('ALTER TABLE incidents ADD COLUMN ticket_code VARCHAR(32);')
-        # backfill existing rows
         for inc in Incident.query.filter(Incident.ticket_code.is_(None)).all():
             inc.ticket_code = generate_unique_ticket()
         db.session.commit()
@@ -138,11 +137,9 @@ def is_password_reasonable(pw: str, username: str = '') -> bool:
 # Ticket generation & lookup
 # -----------------------------------------------------------------------------
 def generate_ticket_code(date: Optional[datetime] = None, suffix_len: int = 4) -> str:
-    """
-    Format: IR-YYYYMMDD-XXXX where XXXX is hex-like uppercase.
-    """
     d = (date or datetime.utcnow()).strftime("%Y%m%d")
-    suffix = ''.join(random.choices(string.hexdigits.upper().replace('G', ''), k=suffix_len))
+    hex_chars = "0123456789ABCDEF"
+    suffix = ''.join(random.choices(hex_chars, k=suffix_len))
     return f"IR-{d}-{suffix}"
 
 def generate_unique_ticket(max_attempts: int = 10) -> str:
@@ -150,13 +147,35 @@ def generate_unique_ticket(max_attempts: int = 10) -> str:
         code = generate_ticket_code()
         if not Incident.query.filter_by(ticket_code=code).first():
             return code
-    # Fallback: include seconds to reduce collision
     return generate_ticket_code(suffix_len=6)
 
 def get_incident_by_ticket(ticket_code: str) -> Optional[Incident]:
     if not ticket_code:
         return None
     return Incident.query.filter_by(ticket_code=ticket_code).first()
+
+# -----------------------------------------------------------------------------
+# Password reset tokens (itsdangerous)
+# -----------------------------------------------------------------------------
+def get_serializer() -> URLSafeTimedSerializer:
+    return URLSafeTimedSerializer(app.config['SECRET_KEY'], salt='password-reset')
+
+def generate_reset_token(user: User) -> str:
+    s = get_serializer()
+    return s.dumps({'uid': user.id})
+
+def verify_reset_token(token: str, max_age_seconds: int = 3600) -> Optional[User]:
+    s = get_serializer()
+    try:
+        data = s.loads(token, max_age=max_age_seconds)
+        uid = data.get('uid')
+        if not uid:
+            return None
+        return User.query.get(uid)
+    except SignatureExpired:
+        return None
+    except BadSignature:
+        return None
 
 # -----------------------------------------------------------------------------
 # Routes
@@ -254,7 +273,6 @@ def admin_dashboard():
             flash('Incident not found.', 'warning')
             return redirect(url_for('admin_dashboard'))
         incident.status = status
-        # ensure legacy rows have tickets
         if not incident.ticket_code:
             incident.ticket_code = generate_unique_ticket()
         db.session.commit()
@@ -266,10 +284,6 @@ def admin_dashboard():
 
 @app.route('/report', methods=['GET', 'POST'])
 def report_incident():
-    """
-    Anonymous or authenticated report creation.
-    Generates a unique ticket and redirects to public ticket page.
-    """
     if request.method == 'POST':
         department = (request.form.get('department') or '').strip()
         nature = (request.form.get('nature') or '').strip()
@@ -308,9 +322,6 @@ def my_reports():
 
 @app.route('/ticket/<ticket_code>')
 def ticket_status(ticket_code):
-    """
-    Public status page for a ticket (no auth required).
-    """
     inc = get_incident_by_ticket(ticket_code)
     if not inc:
         flash('Ticket not found.', 'warning')
@@ -319,10 +330,6 @@ def ticket_status(ticket_code):
 
 @app.route('/ticket/<ticket_code>/pdf')
 def ticket_pdf(ticket_code):
-    """
-    Generate a simple PDF report for the incident (public).
-    Requires 'reportlab'. If unavailable, 501 Not Implemented.
-    """
     inc = get_incident_by_ticket(ticket_code)
     if not inc:
         flash('Ticket not found.', 'warning')
@@ -372,18 +379,68 @@ def ticket_pdf(ticket_code):
         return send_file(buf, as_attachment=True, download_name=filename, mimetype="application/pdf")
 
     except Exception as e:
-        # If reportlab not available or another failure
         print("[ticket_pdf] PDF generation unavailable:", e)
         abort(501, description="PDF generation not available on this server.")
 
+# -------------------------- Password Reset Flow ------------------------------
+
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
+    """
+    Accepts username OR email. Always responds generically.
+    In dev, we show the reset link so you can click it directly.
+    """
     if request.method == 'POST':
-        email = (request.form.get('email') or '').strip()
-        # TODO: implement email reset tokens
-        flash('If an account with that email exists, a reset link has been sent.', 'info')
+        identifier = (request.form.get('identifier') or '').strip()
+        user = None
+        if identifier:
+            user = User.query.filter(
+                (User.username == identifier) | (User.email == identifier)
+            ).first()
+        if user:
+            token = generate_reset_token(user)
+            reset_url = url_for('reset_password', token=token, _external=True)
+            # TODO: send email with reset_url
+            print(f"[dev] Password reset link for {user.username}: {reset_url}")
+            if app.debug and SHOW_RESET_LINK_IN_DEV:
+                flash(f'Dev reset link: {reset_url}', 'secondary')
+
+        flash('If an account exists for that identifier, a reset link has been sent.', 'info')
         return redirect(url_for('login'))
+
     return render_template('forgot_password.html')
+
+@app.route('/reset-password', methods=['GET', 'POST'])
+def reset_password():
+    """
+    Accepts token via query string (?token=...). On POST, updates password.
+    Token expires after 1 hour by default.
+    """
+    token = request.args.get('token', '', type=str)
+    user = verify_reset_token(token)
+
+    if not token or not user:
+        flash('The reset link is invalid or has expired.', 'danger')
+        return redirect(url_for('forgot_password'))
+
+    if request.method == 'POST':
+        password = request.form.get('password') or ''
+        password_confirm = request.form.get('password_confirm') or ''
+        if password != password_confirm:
+            flash('Passwords do not match.', 'danger')
+            return render_template('reset_password.html', token=token, username=user.username)
+
+        if not is_password_reasonable(password, username=user.username):
+            flash('Please choose a stronger password.', 'warning')
+            return render_template('reset_password.html', token=token, username=user.username)
+
+        user.set_password(password)
+        db.session.commit()
+        session.clear()  # ensure any sessions are invalidated
+        flash('Your password has been reset. You may now log in.', 'success')
+        return redirect(url_for('login'))
+
+    return render_template('reset_password.html', token=token, username=user.username)
 
 # -----------------------------------------------------------------------------
 # Optional: harden some headers quickly
