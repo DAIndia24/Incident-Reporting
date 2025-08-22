@@ -33,7 +33,7 @@
 }
 
 /* -----------------------------------------------------------------------------
-   Base
+   Base / Page layout (sticky footer)
 ----------------------------------------------------------------------------- */
 *,
 *::before,
@@ -45,6 +45,10 @@ body {
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
   color: var(--text);
   background: var(--bg-grad-start);
+  /* Sticky footer layout */
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
 /* App gradient background */
@@ -54,6 +58,9 @@ body {
               linear-gradient(180deg, rgba(255,255,255,0.0), rgba(0,0,0,0.03));
   min-height: 100vh;
 }
+
+/* Allow main content to grow and push footer down */
+main { flex: 1 0 auto; }
 
 /* -----------------------------------------------------------------------------
    Navbar
@@ -199,12 +206,13 @@ a:not(.btn):hover { color: #0284c7; }
 .toast-info    { background: linear-gradient(135deg, var(--info),    #1d4ed8); }
 
 /* -----------------------------------------------------------------------------
-   Footer
+   Footer (sticky at bottom when content is short)
 ----------------------------------------------------------------------------- */
 .app-footer {
   background: rgba(255,255,255,0.35);
   backdrop-filter: blur(6px);
   border-top: 1px solid var(--card-border);
+  margin-top: auto;         /* key: stick footer to bottom */
 }
 .dark-mode .app-footer {
   background: rgba(17,24,39,0.6);
@@ -278,18 +286,11 @@ a:not(.btn):hover { color: #0284c7; }
 /* -----------------------------------------------------------------------------
    Ticket page specific (high-contrast dark mode)
 ----------------------------------------------------------------------------- */
-.ticket-card .ticket-section-title {
-  font-weight: 700;
-}
+.ticket-card .ticket-section-title { font-weight: 700; }
 
 /* Definition list readability */
-.ticket-card .ticket-meta dt {
-  font-weight: 700;
-  opacity: 1;
-}
-.ticket-card .ticket-meta dd {
-  margin-bottom: .5rem;
-}
+.ticket-card .ticket-meta dt { font-weight: 700; opacity: 1; }
+.ticket-card .ticket-meta dd { margin-bottom: .5rem; }
 
 /* Make the ticket page unmistakably high-contrast in dark mode */
 .dark-mode .ticket-card {
@@ -330,9 +331,7 @@ a:not(.btn):hover { color: #0284c7; }
 }
 
 /* Any muted text inside ticket card (file sizes, etc.) */
-.dark-mode .ticket-card .text-muted {
-  color: #cbd5e1 !important;                    /* slate-300 */
-}
+.dark-mode .ticket-card .text-muted { color: #cbd5e1 !important; }
 
 /* Download button legibility */
 .dark-mode .ticket-card .btn-outline-secondary {
@@ -346,9 +345,7 @@ a:not(.btn):hover { color: #0284c7; }
 }
 
 /* Separator tone */
-.dark-mode .ticket-sep {
-  border-color: rgba(255,255,255,0.18) !important;
-}
+.dark-mode .ticket-sep { border-color: rgba(255,255,255,0.18) !important; }
 
 /* Badge contrast (secondary) */
 .dark-mode .ticket-card .badge.bg-secondary {
