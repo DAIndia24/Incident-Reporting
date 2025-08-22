@@ -3,8 +3,47 @@
 {% block content %}
 <h2 class="mb-4">Incident Reports</h2>
 
+<!-- Filters -->
+<form class="row g-3 mb-3" method="GET" action="{{ url_for('admin_dashboard') }}">
+  <div class="col-md-3">
+    <label for="filter-dept" class="form-label">Department</label>
+    <select id="filter-dept" name="department" class="form-select">
+      <option value="">All</option>
+      {% for dept in departments %}
+        <option value="{{ dept }}" {% if selected_department == dept %}selected{% endif %}>{{ dept }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="col-md-3">
+    <label for="filter-status" class="form-label">Status</label>
+    <select id="filter-status" name="status" class="form-select">
+      <option value="">All</option>
+      {% for st in statuses %}
+        <option value="{{ st }}" {% if selected_status == st %}selected{% endif %}>{{ st }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="col-md-3">
+    <label for="filter-from" class="form-label">From</label>
+    <input id="filter-from" type="date" name="date_from" class="form-control" value="{{ date_from or '' }}">
+  </div>
+
+  <div class="col-md-3">
+    <label for="filter-to" class="form-label">To</label>
+    <input id="filter-to" type="date" name="date_to" class="form-control" value="{{ date_to or '' }}">
+  </div>
+
+  <div class="col-12 d-flex gap-2">
+    <button type="submit" class="btn btn-primary">Apply filters</button>
+    <a class="btn btn-outline-secondary" href="{{ url_for('admin_dashboard') }}">Clear</a>
+  </div>
+</form>
+
 {% if incidents %}
 <div class="table-responsive">
+  <!-- Client-side quick search still available -->
   <div class="mb-3">
     <input type="text" id="incident-search" class="form-control" placeholder="Search incidents…">
   </div>
@@ -54,4 +93,19 @@
 {% else %}
 <div class="alert alert-info" role="alert">No incident reports to display.</div>
 {% endif %}
+
+<!-- Simple client-side filter for the visible table rows -->
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const input = document.getElementById('incident-search');
+    const table = document.getElementById('incidents-table');
+    if (!input || !table) return;
+    input.addEventListener('input', () => {
+      const term = input.value.toLowerCase();
+      table.querySelectorAll('tbody tr').forEach(row => {
+        row.style.display = row.textContent.toLowerCase().includes(term) ? '' : 'none';
+      });
+    });
+  });
+</script>
 {% endblock %}

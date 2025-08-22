@@ -1,5 +1,4 @@
 import os
-import io
 import secrets
 import string
 from datetime import datetime, timedelta
@@ -11,7 +10,7 @@ from flask import (
 )
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
-class URLSafeTimedSerializer: ...
+from werkzeug.utils import secure_filename
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 
 # ------------------------------------------------------------------------------
@@ -43,6 +42,9 @@ ALLOWED_EXTENSIONS = {
 serializer = URLSafeTimedSerializer(app.config["SECRET_KEY"])
 
 db = SQLAlchemy(app)
+
+# Allowed statuses for filtering / display
+STATUSES = ["New", "In Review", "Resolved"]
 
 # ------------------------------------------------------------------------------
 # Models
@@ -135,6 +137,15 @@ def verify_download_token(token: str, max_age=3600) -> dict:
         return serializer.loads(token, salt="download", max_age=max_age)
     except (BadSignature, SignatureExpired):
         return {}
+
+def parse_date_yyyy_mm_dd(s: str):
+    """Parse 'YYYY-MM-DD' to a datetime at start of day; returns None if blank/invalid."""
+    if not s:
+        return None
+    try:
+        return datetime.strptime(s, "%Y-%m-%d")
+    except Exception:
+        return None
 
 # ------------------------------------------------------------------------------
 # DB Init / Seed
@@ -258,7 +269,6 @@ def report_incident():
                 flash(f"File type not allowed: {f.filename}", "warning")
                 continue
 
-            from werkzeug.utils import secure_filename
             original = secure_filename(f.filename)
             # Randomize stored name to prevent guessing
             rand = secrets.token_hex(16)
@@ -350,9 +360,54 @@ def my_reports():
 @app.route("/admin")
 @admin_required
 def admin_dashboard():
-    # basic listing; can be extended later with filters/search
-    incs = Incident.query.order_by(Incident.created_at.desc()).all()
-    return render_template("admin_dashboard.html", incidents=incs)
+    """
+    Admin dashboard with server-side filters:
+      - department: exact match
+      - status: exact match
+      - date_from / date_to: inclusive range on created_at
+    """
+    # Read filters from query string
+    department = (request.args.get("department") or "").strip()
+    status = (request.args.get("status") or "").strip()
+    date_from_str = (request.args.get("date_from") or "").strip()
+    date_to_str = (request.args.get("date_to") or "").strip()
+
+    # Build base query
+    q = Incident.query
+
+    if department:
+        q = q.filter(Incident.department == department)
+
+    if status:
+        q = q.filter(Incident.status == status)
+
+    start_dt = parse_date_yyyy_mm_dd(date_from_str)
+    end_dt = parse_date_yyyy_mm_dd(date_to_str)
+
+    # Normalize dates: inclusive [start, end_of_day]
+    if start_dt:
+        q = q.filter(Incident.created_at >= start_dt)
+    if end_dt:
+        end_of_day = end_dt + timedelta(days=1)  # next day 00:00 (exclusive upper bound)
+        q = q.filter(Incident.created_at < end_of_day)
+
+    incs = q.order_by(Incident.created_at.desc()).all()
+
+    # Build department list for dropdown (distinct non-null)
+    raw_depts = db.session.query(Incident.department).distinct().all()
+    departments = sorted({d[0] for d in raw_depts if d and d[0]})
+
+    return render_template(
+        "admin_dashboard.html",
+        incidents=incs,
+        departments=departments,
+        statuses=STATUSES,
+        # echo current filters back to template
+        selected_department=department,
+        selected_status=status,
+        date_from=date_from_str,
+        date_to=date_to_str,
+    )
 
 # ------------------------ Forgot / Reset Password Flow ------------------------
 @app.route("/forgot-password", methods=["GET", "POST"])
