@@ -1,112 +1,98 @@
 {% extends "base.html" %}
-
-{% block title %}Register{% endblock %}
-
+{% block title %}Create Account · Ethics Radar{% endblock %}
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-md-6 col-lg-5">
-    <div class="card mt-5">
-      <div class="card-body">
-        <h2 class="card-title text-center mb-4">Register</h2>
+  <div class="col-md-8 col-lg-6 col-xl-5">
+    <div class="card mt-4">
+      <div class="card-body p-4 p-md-5">
+        <h2 class="card-title mb-3">Create your account</h2>
+        <p class="text-muted mb-4">Sign up to submit reports and track your tickets more easily.</p>
 
-        <form method="POST" novalidate>
-          <!-- Username -->
+        <!-- IMPORTANT: method=POST + correct field names for the backend -->
+        <form action="{{ url_for('register') }}" method="POST" novalidate>
           <div class="mb-3">
-            <label for="reg-username" class="form-label">Username</label>
-            <input
-              type="text"
-              class="form-control"
-              id="reg-username"
-              name="username"
-              autocomplete="username"
-              required
-            >
+            <label for="regUsername" class="form-label">Username</label>
+            <input id="regUsername" name="username" type="text" class="form-control" placeholder="e.g. jdoe"
+                   minlength="3" maxlength="120" autocomplete="username" required>
           </div>
 
-          <!-- Password (no toggle) -->
-          <div class="mb-2">
-            <label for="reg-password" class="form-label">Password</label>
-            <div class="input-group">
-              <input
-                type="password"
-                class="form-control"
-                id="reg-password"
-                name="password"
-                autocomplete="new-password"
-                required
-              >
-            </div>
-          </div>
-
-          <!-- Strength Meter -->
-          <div class="password-meter my-2" id="pw-meter" aria-hidden="false">
-            <div class="meter-bar"></div>
-            <div class="meter-bar"></div>
-            <div class="meter-bar"></div>
-            <div class="meter-bar"></div>
-          </div>
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <small class="text-muted">Password strength:</small>
-            <small id="pw-label" class="fw-semibold">Very weak</small>
-          </div>
-
-          <!-- Confirm Password (no toggle) -->
-          <div class="mb-2">
-            <label for="reg-password-confirm" class="form-label">Confirm Password</label>
-            <div class="input-group">
-              <input
-                type="password"
-                class="form-control"
-                id="reg-password-confirm"
-                name="password_confirm"
-                autocomplete="new-password"
-                required
-                aria-describedby="confirmHelp"
-              >
-            </div>
-            <div id="confirmHelp" class="invalid-feedback" aria-live="polite"></div>
-          </div>
-
-          <!-- Recommendations -->
           <div class="mb-3">
-            <small class="text-muted d-block mb-1">Recommendations:</small>
-            <ul id="pw-suggestions" class="mb-0 ps-3 small"></ul>
+            <label for="regEmail" class="form-label">Email (optional)</label>
+            <input id="regEmail" name="email" type="email" class="form-control" placeholder="you@example.com"
+                   maxlength="255" autocomplete="email">
+            <div class="form-text">Add an email if you want to receive password reset links.</div>
           </div>
 
-          <!-- Submit -->
-          <button id="register-submit" type="submit" class="btn btn-primary w-100" disabled>
-            Register
-          </button>
-          <small class="form-text text-muted d-block mt-2">
-            Tip: Use at least 12 characters and mix UPPER/lowercase, numbers, and symbols.
-          </small>
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center">
+              <label for="regPassword" class="form-label mb-0">Password</label>
+              <button type="button" class="btn btn-sm btn-link password-toggle p-0"
+                      data-target="#regPassword" aria-label="Toggle password visibility">
+                <i class="bi bi-eye-slash"></i>
+              </button>
+            </div>
+            <input id="regPassword" name="password" type="password" class="form-control"
+                   placeholder="At least 8 characters" minlength="8" autocomplete="new-password" required>
+
+            <!-- Strength meter -->
+            <div class="password-meter mt-2" id="pwMeter" hidden>
+              <div class="meter-bar"></div>
+              <div class="meter-bar"></div>
+              <div class="meter-bar"></div>
+              <div class="meter-bar"></div>
+            </div>
+            <div class="small mt-1" id="pwStrengthLabel">Strength: —</div>
+            <ul class="small text-muted mt-2 mb-0" id="pwSuggestions"></ul>
+          </div>
+
+          <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center">
+              <label for="regPasswordConfirm" class="form-label mb-0">Confirm password</label>
+              <button type="button" class="btn btn-sm btn-link password-toggle p-0"
+                      data-target="#regPasswordConfirm" aria-label="Toggle password visibility">
+                <i class="bi bi-eye-slash"></i>
+              </button>
+            </div>
+            <input id="regPasswordConfirm" name="password_confirm" type="password" class="form-control"
+                   placeholder="Re-enter your password" minlength="8" autocomplete="new-password" required>
+            <div class="small text-danger mt-1" id="pwConfirmMsg"></div>
+          </div>
+
+          <div class="d-grid gap-2">
+            <button id="regSubmit" type="submit" class="btn btn-primary btn-lg">Create account</button>
+            <a class="btn btn-outline-primary" href="{{ url_for('login') }}">
+              <i class="bi bi-box-arrow-in-right me-1"></i>Already have an account? Log in
+            </a>
+            <a class="btn btn-link" href="{{ url_for('forgot_password') }}">Forgot password?</a>
+          </div>
         </form>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Initialize strength UI + confirm-match -->
+<!-- Hook up strength + confirm helpers from base.html -->
 <script>
-  document.addEventListener('DOMContentLoaded', function () {
-    const strengthRef = initPasswordStrength({
-      inputId: 'reg-password',
-      usernameId: 'reg-username',
-      barsSelector: '#pw-meter',
-      labelSelector: '#pw-label',
-      listSelector: '#pw-suggestions',
-      submitId: 'register-submit',
-      minScore: 2
-    });
-
-    initConfirmPassword({
-      passwordId: 'reg-password',
-      confirmId: 'reg-password-confirm',
-      messageSelector: '#confirmHelp',
-      submitId: 'register-submit',
-      strengthRef,
-      minScore: 2
-    });
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof initPasswordStrength === 'function') {
+      const strengthRef = initPasswordStrength({
+        inputId: 'regPassword',
+        barsSelector: '#pwMeter',
+        labelSelector: '#pwStrengthLabel',
+        suggestionsSelector: '#pwSuggestions',
+        minScore: 2, // require “Okay” and up
+      });
+      if (typeof initConfirmPassword === 'function') {
+        initConfirmPassword({
+          passwordId: 'regPassword',
+          confirmId: 'regPasswordConfirm',
+          messageSelector: '#pwConfirmMsg',
+          submitId: 'regSubmit',
+          strengthRef,
+          minScore: 2,
+        });
+      }
+    }
   });
 </script>
 {% endblock %}
