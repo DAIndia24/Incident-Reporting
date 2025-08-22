@@ -1,86 +1,126 @@
-/* Light Mode */
+/* -----------------------------------------------------------------------------
+   Global Theme (Light + Dark) using CSS variables
+----------------------------------------------------------------------------- */
+:root {
+  --bg-grad-start: #0ea5e9;  /* sky-500 */
+  --bg-grad-end:   #9333ea;  /* purple-600 */
+  --card-bg: rgba(255,255,255,0.75);
+  --card-border: rgba(0,0,0,0.06);
+  --text: #1f2937;           /* gray-800 */
+  --muted: #6b7280;          /* gray-500 */
+  --brand: #0ea5e9;
+  --brand-2: #7c3aed;
+
+  --success: #22c55e;
+  --danger:  #ef4444;
+  --warning: #f59e0b;
+  --info:    #3b82f6;
+
+  --shadow: 0 10px 30px rgba(0,0,0,0.15);
+}
+
+.dark-mode {
+  --bg-grad-start: #0b1220;
+  --bg-grad-end:   #14162b;
+  --card-bg: rgba(17,24,39,0.6);   /* gray-900 w/ alpha */
+  --card-border: rgba(255,255,255,0.08);
+  --text: #e5e7eb;                 /* gray-200 */
+  --muted: #9ca3af;                /* gray-400 */
+  --brand: #38bdf8;
+  --brand-2: #a78bfa;
+  --shadow: 0 6px 24px rgba(0,0,0,0.35);
+}
+
+/* -----------------------------------------------------------------------------
+   Base
+----------------------------------------------------------------------------- */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+}
+
 body {
-  font-family: Arial, sans-serif;
-  background-color: #f8f9fa;
-  color: #343a40;
-  transition: background-color .3s, color .3s;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+  color: var(--text);
+  background: var(--bg-grad-start);
 }
-.navbar { background-color: #007bff; }
-.navbar-brand, .nav-link { color: #fff !important; }
-.btn-primary { background-color: #007bff; border-color: #007bff; }
-.btn-primary:hover { background-color: #0056b3; border-color: #0056b3; }
-.card { border: 1px solid #dee2e6; border-radius: .25rem; box-shadow: 0 .125rem .25rem rgba(0,0,0,.075); }
-.form-control { border-color: #ced4da; }
-.form-text, .text-muted { color: #6c757d !important; }
-.alert { margin-top: 1rem; }
-table { color: inherit; }
-table thead th { color: #495057; border-bottom-color: #dee2e6; }
-table tbody tr { background-color: #fff; }
-table td { border-top-color: #dee2e6; }
-a, .btn-link { color: #0d6efd; }
-a:hover, .btn-link:hover { color: #0a58ca; }
 
-/* Dark Mode */
-body.dark-mode { background-color: #1f2225; color: #e9ecef; }
-.dark-mode .navbar { background-color: #111417; }
-.dark-mode .navbar-brand, .dark-mode .nav-link { color: #f8f9fa !important; }
-.dark-mode .navbar .navbar-toggler { border-color: rgba(255,255,255,.35); }
-.dark-mode .navbar .navbar-toggler-icon { filter: invert(1) grayscale(100%); }
-
-.dark-mode .card { background-color: #2a2e32; border-color: #3a3f44; color: #e9ecef; }
-.dark-mode .form-control { background-color: #3a3f44; color: #f8f9fa; border-color: #4b5157; }
-.dark-mode .form-control::placeholder { color: #cfd4da; }
-.dark-mode label, .dark-mode .form-label, .dark-mode .form-check-label { color: #f1f3f5; }
-.dark-mode .form-text, .dark-mode .text-muted { color: #c9d1d9 !important; }
-
-.dark-mode .btn-primary { background-color: #1a6dcd; border-color: #1a6dcd; }
-.dark-mode .btn-primary:hover { background-color: #145aa8; border-color: #145aa8; }
-.dark-mode .btn-outline-secondary { color: #e9ecef; border-color: #adb5bd; }
-.dark-mode .btn-outline-secondary:hover { background-color: #495057; color: #fff; }
-
-.dark-mode a, .dark-mode .btn-link { color: #66b2ff; }
-.dark-mode a:hover, .dark-mode .btn-link:hover { color: #99ccff; }
-
-.dark-mode .alert { color: #0b1117; background-color: #a8d0ff; border-color: #7bb8ff; }
-.dark-mode .alert-info { color: #052030; background-color: #a9e1ff; border-color: #7bd1ff; }
-
-.dark-mode table { color: #e9ecef; }
-.dark-mode table thead th { color: #f1f3f5; border-bottom-color: #4b5157; }
-.dark-mode table tbody tr { background-color: #2a2e32; }
-.dark-mode table tbody tr:nth-of-type(odd) { background-color: #32373c; }
-.dark-mode table td { border-top-color: #4b5157; }
-.dark-mode .badge.bg-warning { color: #1f2225; }
-.dark-mode .is-invalid { border-color: #f5c2c7 !important; }
-.dark-mode .invalid-feedback { color: #f8d7da !important; }
-.dark-mode .is-valid { border-color: #9ad29a !important; }
-
-/* Show/Hide toggle button (login/admin only) */
-.password-toggle-btn {
-  background-color: rgba(0,0,0,.06);
-  color: #212529;
-  border: 1px solid rgba(0,0,0,.1);
-  line-height: 1;
-  z-index: 2;
-  transition: background-color .15s, color .15s, border-color .15s, box-shadow .15s;
+/* App gradient background */
+.bg-app {
+  background: radial-gradient(1200px 800px at 20% -10%, var(--bg-grad-start), transparent 70%),
+              radial-gradient(1000px 700px at 90% -10%, var(--bg-grad-end), transparent 60%),
+              linear-gradient(180deg, rgba(255,255,255,0.0), rgba(0,0,0,0.03));
+  min-height: 100vh;
 }
-.password-toggle-btn:hover, .password-toggle-btn:focus { background-color: rgba(0,0,0,.12); color: #212529; border-color: rgba(0,0,0,.2); }
-.password-toggle-btn:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
-.password-toggle-btn i { pointer-events: none; }
-.dark-mode .password-toggle-btn {
-  background-color: rgba(255,255,255,.16);
+
+/* -----------------------------------------------------------------------------
+   Navbar
+----------------------------------------------------------------------------- */
+.app-navbar {
+  background: linear-gradient(90deg, rgba(0,0,0,0.65), rgba(0,0,0,0.3));
+  backdrop-filter: blur(8px);
+}
+
+.brand-pill {
+  display: inline-grid;
+  place-items: center;
+  width: 2.0rem;
+  height: 2.0rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--brand), var(--brand-2));
+  color: white;
+  font-weight: 700;
+  letter-spacing: .5px;
+  margin-right: .4rem;
+}
+
+/* -----------------------------------------------------------------------------
+   Cards / Surfaces
+----------------------------------------------------------------------------- */
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 1rem !important;
+  box-shadow: var(--shadow);
+}
+
+.card .card-title { font-weight: 700; }
+
+/* -----------------------------------------------------------------------------
+   Buttons
+----------------------------------------------------------------------------- */
+.btn-primary {
+  background: linear-gradient(135deg, var(--brand), var(--brand-2));
+  border: 0;
+}
+.btn-primary:hover { filter: brightness(0.95); }
+
+.btn-outline-primary {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+.btn-outline-primary:hover {
+  background: var(--brand);
   color: #fff;
-  border: 1px solid rgba(255,255,255,.25);
-}
-.dark-mode .password-toggle-btn:hover, .dark-mode .password-toggle-btn:focus {
-  background-color: rgba(255,255,255,.28);
-  color: #fff;
-  border-color: rgba(255,255,255,.35);
+  border-color: var(--brand);
 }
 
-/* Ensure input has space for toggle if utility not present */
-.has-password-toggle .form-control { padding-right: 3rem; }
+/* -----------------------------------------------------------------------------
+   Forms
+----------------------------------------------------------------------------- */
+.form-control, .form-select {
+  border-radius: .75rem;
+  border-color: var(--card-border);
+}
+.form-control:focus, .form-select:focus {
+  box-shadow: 0 0 0 .2rem rgba(14,165,233,.25);
+  border-color: var(--brand);
+}
 
-/* Password Strength Meter */
+/* Password meter */
 .password-meter {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -89,15 +129,99 @@ body.dark-mode { background-color: #1f2225; color: #e9ecef; }
 .password-meter .meter-bar {
   height: .5rem;
   border-radius: .25rem;
-  background-color: #e9ecef;
-  transition: background-color .2s ease-in-out, transform .2s ease-in-out;
+  background: rgba(0,0,0,0.08);
 }
-.password-meter.score-0 .meter-bar.filled { background-color: #dc3545; }
-.password-meter.score-1 .meter-bar.filled { background-color: #fd7e14; }
-.password-meter.score-2 .meter-bar.filled { background-color: #ffc107; }
-.password-meter.score-3 .meter-bar.filled { background-color: #0d6efd; }
-.password-meter.score-4 .meter-bar.filled { background-color: #198754; }
-.dark-mode .password-meter .meter-bar { background-color: rgba(255,255,255,.18); }
+.dark-mode .password-meter .meter-bar {
+  background: rgba(255,255,255,0.15);
+}
+.password-meter .meter-bar.active:nth-child(1) { background: #f87171; } /* red-400 */
+.password-meter .meter-bar.active:nth-child(2) { background: #fbbf24; } /* amber-400 */
+.password-meter .meter-bar.active:nth-child(3) { background: #34d399; } /* emerald-400 */
+.password-meter .meter-bar.active:nth-child(4) { background: #22c55e; } /* green-500 */
 
-/* Modal close icon visibility */
-.dark-mode .btn-close { filter: invert(1) grayscale(100%); }
+/* -----------------------------------------------------------------------------
+   Tables
+----------------------------------------------------------------------------- */
+.table thead th {
+  font-weight: 700;
+  border-bottom-width: 1px;
+}
+.table-hover tbody tr:hover {
+  background-color: rgba(0,0,0,0.03);
+}
+.dark-mode .table-hover tbody tr:hover {
+  background-color: rgba(255,255,255,0.05);
+}
+
+/* Badges */
+.badge { font-weight: 600; }
+
+/* -----------------------------------------------------------------------------
+   Toasts (flash messages)
+----------------------------------------------------------------------------- */
+.toast .toast-body { color: #fff; border-radius: .75rem; }
+.toast-success { background: linear-gradient(135deg, var(--success), #16a34a); }
+.toast-danger  { background: linear-gradient(135deg, var(--danger),  #b91c1c); }
+.toast-warning { background: linear-gradient(135deg, var(--warning), #d97706); color: #111827; }
+.toast-info    { background: linear-gradient(135deg, var(--info),    #1d4ed8); }
+
+/* -----------------------------------------------------------------------------
+   Footer
+----------------------------------------------------------------------------- */
+.app-footer {
+  background: rgba(255,255,255,0.35);
+  backdrop-filter: blur(6px);
+  border-top: 1px solid var(--card-border);
+}
+.dark-mode .app-footer {
+  background: rgba(17,24,39,0.4);
+}
+
+/* -----------------------------------------------------------------------------
+   Utilities
+----------------------------------------------------------------------------- */
+.text-muted { color: var(--muted) !important; }
+
+/* -----------------------------------------------------------------------------
+   Homepage hero & FAB
+----------------------------------------------------------------------------- */
+.hero-card {
+  background:
+    radial-gradient(600px 300px at -10% -10%, rgba(255,255,255,0.45), transparent 60%),
+    radial-gradient(600px 300px at 110% -10%, rgba(255,255,255,0.35), transparent 60%),
+    var(--card-bg);
+}
+.hero-title {
+  letter-spacing: -0.5px;
+}
+
+.hero-lookup .form-control-lg {
+  padding-top: .9rem;
+  padding-bottom: .9rem;
+}
+
+.feature-icon {
+  width: 42px; height: 42px;
+  border-radius: .75rem;
+  display: grid; place-items: center;
+  background: linear-gradient(135deg, var(--brand), var(--brand-2));
+  color: #fff;
+  flex: 0 0 42px;
+  font-size: 1.1rem;
+}
+
+.fab-report {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 1050;
+  background: linear-gradient(135deg, var(--brand), var(--brand-2));
+  color: #fff !important;
+  border-radius: 999px;
+  padding: .8rem 1.25rem;
+  box-shadow: var(--shadow);
+  text-decoration: none;
+  font-weight: 600;
+}
+.fab-report:hover { filter: brightness(0.95); text-decoration: none; }
+.fa
