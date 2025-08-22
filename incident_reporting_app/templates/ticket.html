@@ -3,15 +3,15 @@
 {% block content %}
 <div class="row justify-content-center">
   <div class="col-lg-8 col-xl-7">
-    <div class="card mt-4">
+    <div class="card mt-4 ticket-card">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <h2 class="card-title mb-0">Incident Ticket</h2>
         </div>
 
-        <dl class="row">
+        <dl class="row ticket-meta">
           <dt class="col-sm-3">Ticket</dt>
-          <dd class="col-sm-9"><code>{{ incident.ticket_code }}</code></dd>
+          <dd class="col-sm-9"><code class="ticket-code">{{ incident.ticket_code }}</code></dd>
 
           <dt class="col-sm-3">Department</dt>
           <dd class="col-sm-9">{{ incident.department or 'N/A' }}</dd>
@@ -34,16 +34,16 @@
           <dd class="col-sm-9">{{ incident.created_at.strftime('%Y-%m-%d %H:%M') }}</dd>
         </dl>
 
-        <hr>
-        <h5>Description</h5>
-        <p class="mb-3" style="white-space: pre-wrap;">{{ incident.description or 'N/A' }}</p>
+        <hr class="ticket-sep">
+        <h5 class="ticket-section-title">Description</h5>
+        <p class="mb-3 ticket-description" style="white-space: pre-wrap;">{{ incident.description or 'N/A' }}</p>
 
-        <h5>Attachments</h5>
+        <h5 class="ticket-section-title">Attachments</h5>
         {% if incident.attachments %}
-          <ul class="list-group mb-3">
+          <ul class="list-group mb-3 ticket-attachments">
             {% for att in incident.attachments %}
               <li class="list-group-item d-flex justify-content-between align-items-center">
-                <span>
+                <span class="attachment-name">
                   {{ att.filename_original }}
                   <small class="text-muted">({{ (att.size or 0) // 1024 }} KB)</small>
                 </span>

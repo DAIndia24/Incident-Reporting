@@ -98,7 +98,7 @@ body {
 ----------------------------------------------------------------------------- */
 .text-muted { color: var(--muted) !important; }
 
-/* Give headings extra punch in dark mode (helps feature titles) */
+/* Give headings extra punch in dark mode */
 .dark-mode h1, .dark-mode h2, .dark-mode h3, .dark-mode h4, .dark-mode h5 {
   color: #f8fafc; /* slate-50 */
 }
@@ -130,6 +130,17 @@ a:not(.btn):hover { color: #0284c7; }
   background: #93c5fd;
   color: #0b1220;
   border-color: #93c5fd;
+}
+
+/* Improve generic outline-secondary for dark backgrounds */
+.dark-mode .btn-outline-secondary {
+  border-color: #cbd5e1;
+  color: #cbd5e1;
+}
+.dark-mode .btn-outline-secondary:hover {
+  background: #cbd5e1;
+  color: #0b1220;
+  border-color: #cbd5e1;
 }
 
 /* -----------------------------------------------------------------------------
@@ -231,7 +242,7 @@ a:not(.btn):hover { color: #0284c7; }
 .dark-mode .hero-lookup h5 { color: #ffffff; }
 .dark-mode .hero-lookup h5 .bi { color: #ffffff; opacity: 0.95; }
 
-/* Feature blocks: ensure headings are bright in dark */
+/* Feature blocks */
 .feature-icon {
   width: 42px; height: 42px;
   border-radius: .75rem;
@@ -241,7 +252,6 @@ a:not(.btn):hover { color: #0284c7; }
   flex: 0 0 42px;
   font-size: 1.1rem;
 }
-/* Additional confidence: bump feature headings */
 .dark-mode .feature-icon + div h5 { color: #ffffff; }
 
 /* Floating CTA */
@@ -263,4 +273,85 @@ a:not(.btn):hover { color: #0284c7; }
 
 @media (max-width: 576px) {
   .fab-report { padding: .7rem .9rem; }
+}
+
+/* -----------------------------------------------------------------------------
+   Ticket page specific (high-contrast dark mode)
+----------------------------------------------------------------------------- */
+.ticket-card .ticket-section-title {
+  font-weight: 700;
+}
+
+/* Definition list readability */
+.ticket-card .ticket-meta dt {
+  font-weight: 700;
+  opacity: 1;
+}
+.ticket-card .ticket-meta dd {
+  margin-bottom: .5rem;
+}
+
+/* Make the ticket page unmistakably high-contrast in dark mode */
+.dark-mode .ticket-card {
+  background: #0b1220 !important;                /* darker, solid */
+  border-color: rgba(255,255,255,0.16) !important;
+  color: #ffffff !important;                     /* default text inside ticket card */
+}
+
+.dark-mode .ticket-card .card-title,
+.dark-mode .ticket-card .ticket-section-title {
+  color: #ffffff !important;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.4);
+}
+
+/* Labels (dt) and values (dd) */
+.dark-mode .ticket-card .ticket-meta dt {
+  color: #e5e7eb !important;                    /* gray-200 */
+  letter-spacing: .1px;
+}
+.dark-mode .ticket-card .ticket-meta dd {
+  color: #ffffff !important;                    /* pure white for values */
+}
+
+/* Ticket code chip */
+.dark-mode .ticket-card .ticket-code {
+  background: #0f172a !important;               /* slate-900 */
+  color: #fef3c7 !important;                    /* amber-100 */
+  padding: .2rem .45rem;
+  border-radius: .35rem;
+  border: 1px solid rgba(255,255,255,0.18) !important;
+}
+
+/* Attachment list contrast */
+.dark-mode .ticket-card .list-group-item {
+  background-color: #0f172a !important;         /* slate-900 */
+  color: #ffffff !important;
+  border-color: rgba(255,255,255,0.16) !important;
+}
+
+/* Any muted text inside ticket card (file sizes, etc.) */
+.dark-mode .ticket-card .text-muted {
+  color: #cbd5e1 !important;                    /* slate-300 */
+}
+
+/* Download button legibility */
+.dark-mode .ticket-card .btn-outline-secondary {
+  border-color: #e5e7eb !important;
+  color: #e5e7eb !important;
+}
+.dark-mode .ticket-card .btn-outline-secondary:hover {
+  background: #e5e7eb !important;
+  color: #0b1220 !important;
+  border-color: #e5e7eb !important;
+}
+
+/* Separator tone */
+.dark-mode .ticket-sep {
+  border-color: rgba(255,255,255,0.18) !important;
+}
+
+/* Badge contrast (secondary) */
+.dark-mode .ticket-card .badge.bg-secondary {
+  background-color: #374151 !important;         /* gray-700 */
+  color: #f9fafb !important;
 }
