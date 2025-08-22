@@ -6,8 +6,9 @@
     <div class="card mt-5">
       <div class="card-body">
         <h2 class="card-title text-center mb-4">Submit Incident Report</h2>
-        <p class="text-muted text-center">Your report will be anonymous.</p>
-        <form method="POST">
+        <p class="text-muted text-center">Your report can include attachments as evidence (images, PDFs, documents).</p>
+
+        <form method="POST" enctype="multipart/form-data">
           <div class="mb-3">
             <label for="department" class="form-label">Department Involved</label>
             <select class="form-select" id="department" name="department" required>
@@ -16,13 +17,6 @@
               <option value="IT Department">IT Department</option>
               <option value="Finance">Finance</option>
               <option value="Operations">Operations</option>
-              <option value="Customer Service">Customer Service</option>
-              <option value="Marketing">Marketing</option>
-              <option value="Sales">Sales</option>
-              <option value="Data Engineering">Data Engineering</option>
-              <option value="Data Cleaning">Data Cleaning</option>
-              <option value="Compliance">Compliance</option>
-              <option value="Data Collection">Data Collection</option>
               <option value="Other">Other</option>
             </select>
           </div>
@@ -33,13 +27,8 @@
               <option value="">Select Nature</option>
               <option value="Harassment">Harassment</option>
               <option value="Discrimination">Discrimination</option>
-              <option value="Security Breach">Security Breach</option>
-              <option value="Data Loss">Data Loss</option>
+              <option value="Safety">Safety</option>
               <option value="Fraud">Fraud</option>
-              <option value="Workplace Accident">Workplace Accident</option>
-              <option value="IT Issue">IT Issue</option>
-              <option value="Equipment Malfunction">Equipment Malfunction</option>
-              <option value="Policy Violation">Policy Violation</option>
               <option value="Other">Other</option>
             </select>
           </div>
@@ -47,6 +36,22 @@
           <div class="mb-3">
             <label for="description" class="form-label">Description of Incident (Optional)</label>
             <textarea class="form-control" id="description" name="description" rows="5"></textarea>
+          </div>
+
+          <!-- New: Evidence uploads -->
+          <div class="mb-3">
+            <label for="evidence" class="form-label">Attach Evidence (Optional)</label>
+            <input
+              type="file"
+              class="form-control"
+              id="evidence"
+              name="evidence"
+              accept=".png,.jpg,.jpeg,.gif,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx"
+              multiple
+            >
+            <div class="form-text">
+              You can select multiple files. Max size per file: 10MB. Allowed: images, PDF, TXT, CSV, DOC/DOCX, XLS/XLSX.
+            </div>
           </div>
 
           <button type="submit" class="btn btn-primary w-100">Submit Report</button>

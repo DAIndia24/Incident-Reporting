@@ -16,95 +16,40 @@
         <th scope="col">Ticket</th>
         <th scope="col">Department</th>
         <th scope="col">Nature</th>
-        <th scope="col">Description</th>
-        <th scope="col">Submitted By</th>
         <th scope="col">Submitted On</th>
         <th scope="col">Status</th>
+        <th scope="col">Files</th>
         <th scope="col">Actions</th>
       </tr>
     </thead>
     <tbody>
       {% for incident in incidents %}
       <tr>
-        <th scope="row">{{ incident.id }}</th>
-        <td>
-          {% if incident.ticket_code %}
-            <a href="{{ url_for('ticket_status', ticket_code=incident.ticket_code) }}">{{ incident.ticket_code }}</a>
-            <a class="ms-2 btn btn-sm btn-outline-secondary" href="{{ url_for('ticket_pdf', ticket_code=incident.ticket_code) }}">PDF</a>
-          {% else %}
-            <span class="text-muted">—</span>
-          {% endif %}
-        </td>
-        <td>{{ incident.department }}</td>
-        <td>{{ incident.nature }}</td>
-        <td>
-          <span title="{{ incident.description|e }}">
-            {{ incident.description[:50] if incident.description else 'N/A' }}…
-          </span>
-          <button type="button" class="btn btn-link btn-sm view-details" data-description="{{ incident.description|e }}">
-            View Details
-          </button>
-        </td>
-        <td>{{ incident.user.username if incident.user else 'Anonymous' }}</td>
-        <td>{{ incident.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+        <th scope="row">{{ loop.index }}</th>
+        <td><code>{{ incident.ticket_code }}</code></td>
+        <td>{{ incident.department or 'N/A' }}</td>
+        <td>{{ incident.nature or 'N/A' }}</td>
+        <td>{{ incident.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
         <td>
           <span class="badge
-            {% if incident.status == 'Pending' %}bg-warning
-            {% elif incident.status == 'In Progress' %}bg-info
+            {% if incident.status == 'New' %}bg-secondary
+            {% elif incident.status == 'In Review' %}bg-warning text-dark
             {% elif incident.status == 'Resolved' %}bg-success
-            {% else %}bg-secondary{% endif %}">
+            {% else %}bg-info{% endif %}">
             {{ incident.status }}
           </span>
         </td>
         <td>
-          <form action="{{ url_for('admin_dashboard') }}" method="POST" class="d-flex">
-            <input type="hidden" name="incident_id" value="{{ incident.id }}">
-            <select class="form-select form-select-sm me-2" name="status" aria-label="Incident Status">
-              <option value="Pending" {% if incident.status == 'Pending' %}selected{% endif %}>Pending</option>
-              <option value="In Progress" {% if incident.status == 'In Progress' %}selected{% endif %}>In Progress</option>
-              <option value="Resolved" {% if incident.status == 'Resolved' %}selected{% endif %}>Resolved</option>
-            </select>
-            <button type="submit" class="btn btn-sm btn-primary">Update</button>
-          </form>
+          {{ incident.attachments|length }}
+        </td>
+        <td class="d-flex gap-2">
+          <a class="btn btn-sm btn-outline-primary" href="{{ url_for('ticket_view', ticket_code=incident.ticket_code) }}">Open</a>
+          <!-- Future: Add status update / reply actions here -->
         </td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
-
-  <script>
-    document.getElementById('incident-search').addEventListener('keyup', function () {
-      const filter = this.value.toLowerCase();
-      document.querySelectorAll('#incidents-table tbody tr').forEach(row => {
-        const text = row.textContent.toLowerCase();
-        row.style.display = text.includes(filter) ? '' : 'none';
-      });
-    });
-
-    const detailsModal = new bootstrap.Modal(document.getElementById('detailsModal'));
-    document.querySelectorAll('.view-details').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const text = btn.dataset.description || '';
-        document.getElementById('modal-description').textContent = text;
-        detailsModal.show();
-      });
-    });
-  </script>
-
-  <div class="modal fade" id="detailsModal" tabindex="-1" aria-labelledby="detailsModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="detailsModalLabel">Incident Details</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body" id="modal-description"></div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        </div>
-      </div>
-    </div>
-  </div>
 </div>
 {% else %}
 <div class="alert alert-info" role="alert">No incident reports to display.</div>

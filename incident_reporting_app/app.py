@@ -1,9 +1,9 @@
 import os
-import random
+import io
+import secrets
 import string
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import wraps
-from typing import Optional
 
 from flask import (
     Flask, render_template, request, redirect, url_for,
@@ -11,296 +11,412 @@ from flask import (
 )
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
+class URLSafeTimedSerializer: ...
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 
+# ------------------------------------------------------------------------------
+# App & Config
+# ------------------------------------------------------------------------------
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-change-me')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///incident_reporting.db')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-SHOW_RESET_LINK_IN_DEV = True
+
+# Strong secret key (override via environment in production)
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", secrets.token_hex(32))
+
+# SQLite DB under instance/
+os.makedirs(app.instance_path, exist_ok=True)
+db_path = os.path.join(app.instance_path, "incident_reporting.db")
+app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+# Uploads
+UPLOAD_DIR = os.path.join(app.instance_path, "uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+app.config["UPLOAD_FOLDER"] = UPLOAD_DIR
+app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024  # 10 MB
+
+ALLOWED_EXTENSIONS = {
+    "png", "jpg", "jpeg", "gif", "pdf", "txt", "csv",
+    "doc", "docx", "xls", "xlsx"
+}
+
+# Token serializer (used for password reset + download tokens)
+serializer = URLSafeTimedSerializer(app.config["SECRET_KEY"])
 
 db = SQLAlchemy(app)
 
+# ------------------------------------------------------------------------------
+# Models
+# ------------------------------------------------------------------------------
 class User(db.Model):
-    __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False, index=True)
-    email = db.Column(db.String(255), unique=True, nullable=True, index=True)
+    username = db.Column(db.String(120), unique=True, index=True, nullable=False)
+    email = db.Column(db.String(255), unique=False)  # optional
     password_hash = db.Column(db.String(255), nullable=False)
-    is_admin = db.Column(db.Boolean, default=False, nullable=False)
-    incidents = db.relationship('Incident', backref='user', lazy=True)
-    def set_password(self, pw: str): self.password_hash = generate_password_hash(pw)
-    def check_password(self, pw: str) -> bool: return check_password_hash(self.password_hash, pw)
+    is_admin = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    incidents = db.relationship("Incident", backref="user", lazy=True)
+
+    def set_password(self, raw):
+        self.password_hash = generate_password_hash(raw)
+
+    def check_password(self, raw):
+        return check_password_hash(self.password_hash, raw)
+
 
 class Incident(db.Model):
-    __tablename__ = 'incidents'
     id = db.Column(db.Integer, primary_key=True)
-    ticket_code = db.Column(db.String(32), nullable=True, index=True)
-    department = db.Column(db.String(120), nullable=False)
-    nature = db.Column(db.String(120), nullable=False)
-    description = db.Column(db.Text, nullable=True)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    status = db.Column(db.String(32), default='Pending', nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    ticket_code = db.Column(db.String(16), unique=True, index=True, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)  # null for anonymous
+    department = db.Column(db.String(120))
+    nature = db.Column(db.String(120))
+    description = db.Column(db.Text)
+    status = db.Column(db.String(32), default="New")
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-def column_exists_sqlite(table: str, column: str) -> bool:
-    engine = db.engine
-    if not engine.url.drivername.startswith("sqlite"):
-        return True
-    with engine.connect() as conn:
-        res = conn.exec_driver_sql(f'PRAGMA table_info({table});').fetchall()
-        return column in [r[1] for r in res]
+    attachments = db.relationship("Attachment", backref="incident", lazy=True, cascade="all, delete-orphan")
 
-def add_ticket_column_if_missing():
-    engine = db.engine
-    if engine.url.drivername.startswith("sqlite") and not column_exists_sqlite('incidents', 'ticket_code'):
-        with engine.connect() as conn:
-            conn.exec_driver_sql('ALTER TABLE incidents ADD COLUMN ticket_code VARCHAR(32);')
-        for inc in Incident.query.filter(Incident.ticket_code.is_(None)).all():
-            inc.ticket_code = generate_unique_ticket()
-        db.session.commit()
 
-def login_required(view):
-    @wraps(view)
-    def wrapped(*args, **kwargs):
-        if 'user_id' not in session:
-            flash('Please log in to continue.', 'warning')
-            return redirect(url_for('login'))
-        return view(*args, **kwargs)
-    return wrapped
+class Attachment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    incident_id = db.Column(db.Integer, db.ForeignKey("incident.id"), nullable=False)
+    filename_original = db.Column(db.String(255), nullable=False)
+    filename_stored = db.Column(db.String(255), nullable=False)
+    mime_type = db.Column(db.String(100))
+    size = db.Column(db.Integer)
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-def admin_required(view):
-    @wraps(view)
-    def wrapped(*args, **kwargs):
-        if not session.get('is_admin'):
-            flash('Administrator access required.', 'danger')
-            return redirect(url_for('index'))
-        return view(*args, **kwargs)
-    return wrapped
+# ------------------------------------------------------------------------------
+# Utilities
+# ------------------------------------------------------------------------------
+def allowed_file(filename: str) -> bool:
+    if "." not in filename:
+        return False
+    ext = filename.rsplit(".", 1)[1].lower()
+    return ext in ALLOWED_EXTENSIONS
 
+def rand_code(n=8):
+    alphabet = string.ascii_uppercase + string.digits
+    return "".join(secrets.choice(alphabet) for _ in range(n))
+
+def current_user():
+    uid = session.get("user_id")
+    if not uid:
+        return None
+    return User.query.get(uid)
+
+def login_required(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if not session.get("user_id"):
+            flash("Please log in to access this page.", "warning")
+            return redirect(url_for("login"))
+        return f(*args, **kwargs)
+    return wrapper
+
+def admin_required(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if not session.get("user_id"):
+            flash("Please log in.", "warning")
+            return redirect(url_for("admin_login"))
+        user = User.query.get(session["user_id"])
+        if not user or not user.is_admin:
+            abort(403)
+        return f(*args, **kwargs)
+    return wrapper
+
+def sign_download_token(incident_id: int, attachment_id: int) -> str:
+    payload = {"incident_id": incident_id, "attachment_id": attachment_id}
+    return serializer.dumps(payload, salt="download")
+
+def verify_download_token(token: str, max_age=3600) -> dict:
+    try:
+        return serializer.loads(token, salt="download", max_age=max_age)
+    except (BadSignature, SignatureExpired):
+        return {}
+
+# ------------------------------------------------------------------------------
+# DB Init / Seed
+# ------------------------------------------------------------------------------
 def ensure_db_and_seed():
     db.create_all()
-    add_ticket_column_if_missing()
-    if not User.query.filter_by(is_admin=True).first():
-        admin = User(username='admin', email=None, is_admin=True)
-        admin.set_password('adminpassword')  # requested seed
+    # seed an admin if none exists
+    if not User.query.filter_by(username="admin").first():
+        admin = User(username="admin", email=None, is_admin=True)
+        admin.set_password("adminpassword")
         db.session.add(admin)
         db.session.commit()
-        print('[seed] Created default admin: username="admin" password="adminpassword"')
 
-def is_password_reasonable(pw: str, username: str = '') -> bool:
-    if not pw or len(pw) < 8: return False
-    lower = any(c.islower() for c in pw)
-    upper = any(c.isupper() for c in pw)
-    digit = any(c.isdigit() for c in pw)
-    special = any(not c.isalnum() for c in pw)
-    if sum([lower, upper, digit, special]) < 2: return False
-    if username and username.lower() in pw.lower(): return False
-    return True
+# ------------------------------------------------------------------------------
+# Routes
+# ------------------------------------------------------------------------------
+@app.route("/")
+def index():
+    return render_template("index.html")
 
-def generate_ticket_code(date: Optional[datetime] = None, suffix_len: int = 4) -> str:
-    d = (date or datetime.utcnow()).strftime("%Y%m%d")
-    suffix = ''.join(random.choices("0123456789ABCDEF", k=suffix_len))
-    return f"IR-{d}-{suffix}"
-
-def generate_unique_ticket(max_attempts: int = 10) -> str:
-    for _ in range(max_attempts):
-        code = generate_ticket_code()
-        if not Incident.query.filter_by(ticket_code=code).first():
-            return code
-    return generate_ticket_code(suffix_len=6)
-
-def get_incident_by_ticket(ticket_code: str) -> Optional[Incident]:
-    if not ticket_code: return None
-    return Incident.query.filter_by(ticket_code=ticket_code).first()
-
-def get_serializer() -> URLSafeTimedSerializer:
-    return URLSafeTimedSerializer(app.config['SECRET_KEY'], salt='password-reset')
-
-def generate_reset_token(user: User) -> str:
-    return get_serializer().dumps({'uid': user.id})
-
-def verify_reset_token(token: str, max_age_seconds: int = 3600) -> Optional[User]:
-    try:
-        data = get_serializer().loads(token, max_age=max_age_seconds)
-        uid = data.get('uid')
-        return db.session.get(User, uid) if uid else None
-    except (SignatureExpired, BadSignature):
-        return None
-
-@app.route('/')
-def index(): return render_template('index.html')
-
-@app.route('/register', methods=['GET', 'POST'])
+# ---------------------- Auth: Register/Login/Logout ---------------------------
+@app.route("/register", methods=["GET", "POST"])
 def register():
-    if request.method == 'POST':
-        username = (request.form.get('username') or '').strip()
-        password = request.form.get('password') or ''
-        password_confirm = request.form.get('password_confirm') or ''
-        if not username or not password:
-            flash('Username and password are required.', 'danger'); return render_template('register.html')
-        if password != password_confirm:
-            flash('Passwords do not match.', 'danger'); return render_template('register.html')
-        if not is_password_reasonable(password, username=username):
-            flash('Please choose a stronger password.', 'warning'); return render_template('register.html')
+    if request.method == "POST":
+        username = (request.form.get("username") or "").strip()
+        email = (request.form.get("email") or "").strip() or None
+        pw = request.form.get("password") or ""
+        pwc = request.form.get("password_confirm") or ""
+        if not username or not pw:
+            flash("Username and password are required.", "danger")
+            return render_template("register.html")
+        if pw != pwc:
+            flash("Passwords do not match.", "danger")
+            return render_template("register.html")
         if User.query.filter_by(username=username).first():
-            flash('Username already taken. Choose another.', 'warning'); return render_template('register.html')
-        user = User(username=username, is_admin=False); user.set_password(password)
-        db.session.add(user); db.session.commit()
-        session['user_id'] = user.id; session['is_admin'] = user.is_admin
-        flash('Registration successful. Welcome!', 'success'); return redirect(url_for('index'))
-    return render_template('register.html')
+            flash("Username already taken.", "danger")
+            return render_template("register.html")
+        u = User(username=username, email=email)
+        u.set_password(pw)
+        db.session.add(u)
+        db.session.commit()
+        flash("Account created. Please log in.", "success")
+        return redirect(url_for("login"))
+    return render_template("register.html")
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route("/login", methods=["GET", "POST"])
 def login():
-    if request.method == 'POST':
-        username = (request.form.get('username') or '').strip()
-        password = request.form.get('password') or ''
+    if request.method == "POST":
+        username = (request.form.get("username") or "").strip()
+        pw = request.form.get("password") or ""
         user = User.query.filter_by(username=username).first()
-        if not user or not user.check_password(password):
-            flash('Invalid username or password.', 'danger'); return render_template('login.html')
-        session['user_id'] = user.id; session['is_admin'] = user.is_admin
-        flash('Logged in successfully.', 'success')
-        return redirect(url_for('admin_dashboard' if user.is_admin else 'index'))
-    return render_template('login.html')
+        if not user or not user.check_password(pw):
+            flash("Invalid credentials.", "danger")
+            return render_template("login.html")
+        session["user_id"] = user.id
+        session["is_admin"] = bool(user.is_admin)
+        flash("Logged in.", "success")
+        if user.is_admin:
+            return redirect(url_for("admin_dashboard"))
+        return redirect(url_for("index"))
+    return render_template("login.html")
 
-@app.route('/logout')
+@app.route("/logout")
 def logout():
-    session.clear(); flash('You have been logged out.', 'info'); return redirect(url_for('index'))
+    session.clear()
+    flash("Logged out.", "success")
+    return redirect(url_for("index"))
 
-@app.route('/admin/login', methods=['GET', 'POST'])
+# ----------------------------- Admin Login ------------------------------------
+@app.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
-    if request.method == 'POST':
-        username = (request.form.get('username') or '').strip()
-        password = (request.form.get('password') or '')
-        user = User.query.filter_by(username=username, is_admin=True).first()
-        if not user or not user.check_password(password):
-            flash('Invalid admin credentials.', 'danger'); return render_template('admin_login.html')
-        session['user_id'] = user.id; session['is_admin'] = True
-        flash('Welcome, Admin.', 'success'); return redirect(url_for('admin_dashboard'))
-    return render_template('admin_login.html')
+    if request.method == "POST":
+        username = (request.form.get("username") or "").strip()
+        pw = request.form.get("password") or ""
+        user = User.query.filter_by(username=username).first()
+        if not user or not user.is_admin or not user.check_password(pw):
+            flash("Invalid admin credentials.", "danger")
+            return render_template("admin_login.html")
+        session["user_id"] = user.id
+        session["is_admin"] = True
+        flash("Welcome, admin.", "success")
+        return redirect(url_for("admin_dashboard"))
+    return render_template("admin_login.html")
 
-@app.route('/admin/dashboard', methods=['GET', 'POST'])
-@admin_required
-def admin_dashboard():
-    if request.method == 'POST':
-        incident_id = request.form.get('incident_id')
-        status = request.form.get('status')
-        if not incident_id or not status:
-            flash('Invalid update request.', 'danger'); return redirect(url_for('admin_dashboard'))
-        incident = db.session.get(Incident, int(incident_id)) if incident_id else None
-        if not incident:
-            flash('Incident not found.', 'warning'); return redirect(url_for('admin_dashboard'))
-        incident.status = status
-        if not incident.ticket_code: incident.ticket_code = generate_unique_ticket()
-        db.session.commit(); flash(f'Incident #{incident.id} updated to "{status}".', 'success')
-        return redirect(url_for('admin_dashboard'))
-    incidents = Incident.query.order_by(Incident.timestamp.desc()).all()
-    return render_template('admin_dashboard.html', incidents=incidents)
-
-@app.route('/report', methods=['GET', 'POST'])
+# ------------------------------ Report Incident -------------------------------
+@app.route("/report", methods=["GET", "POST"])
 def report_incident():
-    if request.method == 'POST':
-        department = (request.form.get('department') or '').strip()
-        nature = (request.form.get('nature') or '').strip()
-        description = (request.form.get('description') or '').strip()
-        if not department or not nature:
-            flash('Department and Nature are required.', 'danger'); return render_template('report.html')
-        ticket_code = generate_unique_ticket()
-        inc = Incident(department=department, nature=nature, description=description or None,
-                       user_id=session.get('user_id'), ticket_code=ticket_code)
-        db.session.add(inc); db.session.commit()
-        flash(f'Incident submitted. Your ticket: {ticket_code}', 'success')
-        return redirect(url_for('ticket_status', ticket_code=ticket_code))
-    return render_template('report.html')
+    """
+    Allows anonymous or logged-in users to submit a report.
+    Supports multiple file uploads via input name="evidence" (multiple).
+    """
+    if request.method == "POST":
+        department = (request.form.get("department") or "").strip()
+        nature = (request.form.get("nature") or "").strip()
+        description = (request.form.get("description") or "").strip()
 
-@app.route('/my-reports')
+        # Create ticket code
+        ticket_code = rand_code(10)
+        while Incident.query.filter_by(ticket_code=ticket_code).first():
+            ticket_code = rand_code(10)
+
+        uid = session.get("user_id")
+        inc = Incident(
+            ticket_code=ticket_code,
+            user_id=uid,
+            department=department or None,
+            nature=nature or None,
+            description=description or None,
+            status="New",
+        )
+        db.session.add(inc)
+        db.session.flush()  # get inc.id
+
+        # Handle multiple files
+        files = request.files.getlist("evidence")
+        saved_count = 0
+        for f in files:
+            if not f or not getattr(f, "filename", ""):
+                continue
+            if not allowed_file(f.filename):
+                flash(f"File type not allowed: {f.filename}", "warning")
+                continue
+
+            from werkzeug.utils import secure_filename
+            original = secure_filename(f.filename)
+            # Randomize stored name to prevent guessing
+            rand = secrets.token_hex(16)
+            _, ext = os.path.splitext(original)
+            stored = f"{rand}{ext.lower()}"
+            stored_path = os.path.join(app.config["UPLOAD_FOLDER"], stored)
+
+            f.save(stored_path)
+            size = os.path.getsize(stored_path)
+            mime = f.mimetype or "application/octet-stream"
+
+            att = Attachment(
+                incident_id=inc.id,
+                filename_original=original,
+                filename_stored=stored,
+                mime_type=mime,
+                size=size,
+            )
+            db.session.add(att)
+            saved_count += 1
+
+        db.session.commit()
+
+        if saved_count:
+            flash(f"Report submitted with {saved_count} attachment(s). Your ticket: {ticket_code}", "success")
+        else:
+            flash(f"Report submitted. Your ticket: {ticket_code}", "success")
+
+        # Redirect to ticket page so anonymous users can bookmark it
+        return redirect(url_for("ticket_view", ticket_code=ticket_code))
+
+    return render_template("report.html")
+
+# ------------------------------- Ticket View ----------------------------------
+@app.route("/ticket/<ticket_code>")
+def ticket_view(ticket_code):
+    inc = Incident.query.filter_by(ticket_code=ticket_code).first()
+    if not inc:
+        abort(404)
+
+    # Build signed download tokens for each attachment so anonymous viewers can download
+    tokens = {}
+    for att in inc.attachments:
+        tokens[att.id] = sign_download_token(incident_id=inc.id, attachment_id=att.id)
+
+    return render_template("ticket.html", incident=inc, download_tokens=tokens)
+
+# ------------------------- Attachment Download (secured) ----------------------
+@app.route("/attachment/<int:attachment_id>/download")
+def download_attachment(attachment_id):
+    """
+    Admins may download directly if logged in.
+    Non-admins require a valid signed token (?token=...).
+    """
+    att = Attachment.query.get_or_404(attachment_id)
+    inc = att.incident
+
+    # Admin path
+    if session.get("user_id"):
+        u = User.query.get(session["user_id"])
+        if u and u.is_admin:
+            return _send_attachment(att)
+
+    # Non-admin: require token
+    token = request.args.get("token", "")
+    data = verify_download_token(token)
+    if not data:
+        abort(403)
+    if data.get("attachment_id") != attachment_id or data.get("incident_id") != inc.id:
+        abort(403)
+
+    return _send_attachment(att)
+
+def _send_attachment(att: Attachment):
+    path = os.path.join(app.config["UPLOAD_FOLDER"], att.filename_stored)
+    if not os.path.isfile(path):
+        abort(404)
+    # Use original filename for the download prompt
+    return send_file(path, as_attachment=True, download_name=att.filename_original, mimetype=att.mime_type)
+
+# ------------------------------ My Reports ------------------------------------
+@app.route("/my-reports")
 @login_required
 def my_reports():
-    if session.get('is_admin'):
-        flash('Admins can review all reports on the dashboard.', 'info'); return redirect(url_for('admin_dashboard'))
-    incidents = Incident.query.filter_by(user_id=session['user_id']).order_by(Incident.timestamp.desc()).all()
-    return render_template('my_reports.html', incidents=incidents)
+    incs = Incident.query.filter_by(user_id=session["user_id"]).order_by(Incident.created_at.desc()).all()
+    return render_template("my_reports.html", incidents=incs)
 
-@app.route('/ticket/<ticket_code>')
-def ticket_status(ticket_code):
-    inc = get_incident_by_ticket(ticket_code)
-    if not inc:
-        flash('Ticket not found.', 'warning'); return redirect(url_for('index'))
-    return render_template('ticket.html', incident=inc)
+# ------------------------------ Admin Dashboard -------------------------------
+@app.route("/admin")
+@admin_required
+def admin_dashboard():
+    # basic listing; can be extended later with filters/search
+    incs = Incident.query.order_by(Incident.created_at.desc()).all()
+    return render_template("admin_dashboard.html", incidents=incs)
 
-@app.route('/ticket/<ticket_code>/pdf')
-def ticket_pdf(ticket_code):
-    inc = get_incident_by_ticket(ticket_code)
-    if not inc:
-        flash('Ticket not found.', 'warning'); return redirect(url_for('index'))
-    try:
-        from reportlab.lib.pagesizes import A4
-        from reportlab.lib.units import mm
-        from reportlab.pdfgen import canvas
-        from io import BytesIO
-        buf = BytesIO(); c = canvas.Canvas(buf, pagesize=A4)
-        width, height = A4
-        def draw_line(y): c.line(20*mm, y, (width-20*mm), y)
-        y = height - 30*mm; c.setFont("Helvetica-Bold", 16); c.drawString(20*mm, y, "Incident Report Ticket"); y -= 10*mm
-        c.setFont("Helvetica", 11)
-        fields = [
-            ("Ticket", inc.ticket_code or ""), ("Internal ID", str(inc.id)),
-            ("Department", inc.department), ("Nature", inc.nature),
-            ("Status", inc.status), ("Submitted On (UTC)", inc.timestamp.strftime("%Y-%m-%d %H:%M:%S")),
-            ("Submitted By", inc.user.username if inc.user else "Anonymous"),
-        ]
-        for label, value in fields: c.drawString(20*mm, y, f"{label}: {value}"); y -= 8*mm
-        draw_line(y); y -= 8*mm; c.setFont("Helvetica-Bold", 12); c.drawString(20*mm, y, "Description"); y -= 8*mm
-        c.setFont("Helvetica", 11); text = c.beginText(20*mm, y)
-        for line in (inc.description or "N/A").splitlines() or ["N/A"]: text.textLine(line[:120])
-        c.drawText(text); c.showPage(); c.save(); buf.seek(0)
-        filename = f"{inc.ticket_code}.pdf" if inc.ticket_code else f"incident-{inc.id}.pdf"
-        return send_file(buf, as_attachment=True, download_name=filename, mimetype="application/pdf")
-    except Exception as e:
-        print("[ticket_pdf] PDF generation unavailable:", e); abort(501, description="PDF generation not available on this server.")
-
-@app.route('/forgot-password', methods=['GET', 'POST'])
+# ------------------------ Forgot / Reset Password Flow ------------------------
+@app.route("/forgot-password", methods=["GET", "POST"])
 def forgot_password():
-    if request.method == 'POST':
-        identifier = (request.form.get('identifier') or '').strip()
+    if request.method == "POST":
+        identifier = (request.form.get("identifier") or "").strip()
         user = None
         if identifier:
             user = User.query.filter((User.username == identifier) | (User.email == identifier)).first()
-        if user:
-            token = generate_reset_token(user)
-            reset_url = url_for('reset_password', token=token, _external=True)
-            print(f"[dev] Password reset link for {user.username}: {reset_url}")
-            if app.debug and SHOW_RESET_LINK_IN_DEV: flash(f'Dev reset link: {reset_url}', 'secondary')
-        flash('If an account exists for that identifier, a reset link has been sent.', 'info')
-        return redirect(url_for('login'))
-    return render_template('forgot_password.html')
+        if user and user.email:
+            token = serializer.dumps({"uid": user.id}, salt="pwreset")
+            # TODO: send email with this link; for now, flash it (dev only)
+            reset_link = url_for("reset_password", token=token, _external=True)
+            flash(f"A password reset link has been generated: {reset_link}", "info")
+        else:
+            flash("If an account exists, a reset link will be sent.", "info")
+        return redirect(url_for("login"))
+    return render_template("forgot_password.html")
 
-@app.route('/reset-password', methods=['GET', 'POST'])
-def reset_password():
-    token = request.args.get('token', '', type=str)
-    user = verify_reset_token(token)
-    if not token or not user:
-        flash('The reset link is invalid or has expired.', 'danger'); return redirect(url_for('forgot_password'))
-    if request.method == 'POST':
-        password = request.form.get('password') or ''
-        password_confirm = request.form.get('password_confirm') or ''
-        if password != password_confirm:
-            flash('Passwords do not match.', 'danger'); return render_template('reset_password.html', token=token, username=user.username)
-        if not is_password_reasonable(password, username=user.username):
-            flash('Please choose a stronger password.', 'warning'); return render_template('reset_password.html', token=token, username=user.username)
-        user.set_password(password); db.session.commit(); session.clear()
-        flash('Your password has been reset. You may now log in.', 'success'); return redirect(url_for('login'))
-    return render_template('reset_password.html', token=token, username=user.username)
+@app.route("/reset-password/<token>", methods=["GET", "POST"])
+def reset_password(token):
+    # token contains user id
+    try:
+        data = serializer.loads(token, salt="pwreset", max_age=3600)
+    except SignatureExpired:
+        flash("Reset link expired. Please request a new one.", "warning")
+        return redirect(url_for("forgot_password"))
+    except BadSignature:
+        abort(400)
 
+    user = User.query.get_or_404(data.get("uid"))
+
+    if request.method == "POST":
+        pw = request.form.get("password") or ""
+        pwc = request.form.get("password_confirm") or ""
+        if not pw or pw != pwc:
+            flash("Passwords do not match.", "danger")
+            return render_template("reset_password.html", token=token, username=user.username)
+        user.set_password(pw)
+        db.session.commit()
+        flash("Your password has been reset. You may now log in.", "success")
+        return redirect(url_for("login"))
+
+    return render_template("reset_password.html", token=token, username=user.username)
+
+# ------------------------------- Security Headers -----------------------------
 @app.after_request
 def set_headers(resp):
-    resp.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
-    resp.headers['X-Content-Type-Options'] = 'nosniff'
-    resp.headers['X-Frame-Options'] = 'DENY'
+    resp.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    resp.headers["X-Content-Type-Options"] = "nosniff"
+    resp.headers["X-Frame-Options"] = "DENY"
+    # Basic CSP (adjust as you add CDNs/features)
+    resp.headers.setdefault(
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; "
+        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+        "img-src 'self' data:; font-src https://cdn.jsdelivr.net; connect-src 'self';"
+    )
     return resp
 
-if __name__ == '__main__':
+# ------------------------------------------------------------------------------
+# Entrypoint
+# ------------------------------------------------------------------------------
+if __name__ == "__main__":
     with app.app_context():
         ensure_db_and_seed()
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=True)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
