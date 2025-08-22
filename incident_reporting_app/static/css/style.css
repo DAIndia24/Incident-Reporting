@@ -121,6 +121,33 @@ a:not(.btn):hover { color: #0284c7; }
 .dark-mode .btn-link { color: #93c5fd; }            /* blue-300 */
 .dark-mode .btn-link:hover { color: #bfdbfe; }      /* blue-200 */
 
+/* LOGIN HINT VISIBILITY (dark mode)
+   1) Preferred: if template uses .auth-hint wrapper
+   2) Fallback: paragraph immediately after <hr> inside the login card
+*/
+.dark-mode .auth-hint { color: #e5e7eb !important; }
+.dark-mode .auth-hint a {
+  color: #bfdbfe !important;
+  text-decoration: underline;
+  text-decoration-color: rgba(191,219,254,0.65);
+}
+.dark-mode .auth-hint a:hover {
+  color: #e0f2fe !important;
+  text-decoration-color: rgba(224,242,254,0.9);
+}
+
+/* Fallback selector when no .auth-hint class exists */
+.dark-mode .card-body hr + p { color: #e5e7eb !important; }
+.dark-mode .card-body hr + p a {
+  color: #bfdbfe !important;
+  text-decoration: underline;
+  text-decoration-color: rgba(191,219,254,0.65);
+}
+.dark-mode .card-body hr + p a:hover {
+  color: #e0f2fe !important;
+  text-decoration-color: rgba(224,242,254,0.9);
+}
+
 /* -----------------------------------------------------------------------------
    Buttons
 ----------------------------------------------------------------------------- */
