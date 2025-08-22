@@ -20,15 +20,16 @@
 }
 
 .dark-mode {
-  --bg-grad-start: #0b1220;
-  --bg-grad-end:   #14162b;
-  --card-bg: rgba(17,24,39,0.6);   /* gray-900 w/ alpha */
-  --card-border: rgba(255,255,255,0.08);
-  --text: #e5e7eb;                 /* gray-200 */
-  --muted: #9ca3af;                /* gray-400 */
-  --brand: #38bdf8;
-  --brand-2: #a78bfa;
-  --shadow: 0 6px 24px rgba(0,0,0,0.35);
+  /* Dark palette tuned for readability */
+  --bg-grad-start: #0b1220;            /* deep navy */
+  --bg-grad-end:   #14162b;            /* indigo/eggplant */
+  --card-bg: rgba(17,24,39,0.92);      /* near-black w/ higher opacity for contrast */
+  --card-border: rgba(255,255,255,0.10);
+  --text: #f3f4f6;                     /* gray-100 */
+  --muted: #cbd5e1;                    /* slate-300 */
+  --brand: #60a5fa;                    /* blue-400 */
+  --brand-2: #a78bfa;                  /* violet-400 */
+  --shadow: 0 8px 28px rgba(0,0,0,0.45);
 }
 
 /* -----------------------------------------------------------------------------
@@ -38,9 +39,7 @@
 *::before,
 *::after { box-sizing: border-box; }
 
-html, body {
-  height: 100%;
-}
+html, body { height: 100%; }
 
 body {
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
@@ -77,6 +76,11 @@ body {
   margin-right: .4rem;
 }
 
+/* Ensure nav links are bright enough in dark */
+.dark-mode .navbar-dark .navbar-nav .nav-link { color: #e5e7eb; }
+.dark-mode .navbar-dark .navbar-nav .nav-link:hover,
+.dark-mode .navbar-dark .navbar-nav .nav-link:focus { color: #ffffff; }
+
 /* -----------------------------------------------------------------------------
    Cards / Surfaces
 ----------------------------------------------------------------------------- */
@@ -90,22 +94,42 @@ body {
 .card .card-title { font-weight: 700; }
 
 /* -----------------------------------------------------------------------------
+   Typography & Links
+----------------------------------------------------------------------------- */
+.text-muted { color: var(--muted) !important; }
+
+/* Give headings extra punch in dark mode (helps feature titles) */
+.dark-mode h1, .dark-mode h2, .dark-mode h3, .dark-mode h4, .dark-mode h5 {
+  color: #f8fafc; /* slate-50 */
+}
+
+a:not(.btn) { color: #0ea5e9; }
+a:not(.btn):hover { color: #0284c7; }
+.dark-mode a:not(.btn) { color: #93c5fd; }         /* blue-300 */
+.dark-mode a:not(.btn):hover { color: #bfdbfe; }   /* blue-200 */
+
+/* -----------------------------------------------------------------------------
    Buttons
 ----------------------------------------------------------------------------- */
 .btn-primary {
   background: linear-gradient(135deg, var(--brand), var(--brand-2));
   border: 0;
+  color: #fff;
 }
 .btn-primary:hover { filter: brightness(0.95); }
 
-.btn-outline-primary {
-  border-color: var(--brand);
-  color: var(--brand);
+.btn-outline-primary { border-color: var(--brand); color: var(--brand); }
+.btn-outline-primary:hover { background: var(--brand); color: #fff; border-color: var(--brand); }
+
+/* In dark mode, keep outline buttons readable */
+.dark-mode .btn-outline-primary {
+  border-color: #93c5fd;
+  color: #93c5fd;
 }
-.btn-outline-primary:hover {
-  background: var(--brand);
-  color: #fff;
-  border-color: var(--brand);
+.dark-mode .btn-outline-primary:hover {
+  background: #93c5fd;
+  color: #0b1220;
+  border-color: #93c5fd;
 }
 
 /* -----------------------------------------------------------------------------
@@ -120,38 +144,35 @@ body {
   border-color: var(--brand);
 }
 
-/* Password meter */
-.password-meter {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: .35rem;
+/* Dark mode form fields: higher-contrast bg/text/placeholder */
+.dark-mode .form-control,
+.dark-mode .form-select,
+.dark-mode .form-control:disabled,
+.dark-mode .form-select:disabled {
+  background-color: #0f172a;             /* slate-900 */
+  color: var(--text);
+  border-color: rgba(255,255,255,0.12);
 }
-.password-meter .meter-bar {
-  height: .5rem;
-  border-radius: .25rem;
-  background: rgba(0,0,0,0.08);
-}
-.dark-mode .password-meter .meter-bar {
-  background: rgba(255,255,255,0.15);
-}
-.password-meter .meter-bar.active:nth-child(1) { background: #f87171; } /* red-400 */
-.password-meter .meter-bar.active:nth-child(2) { background: #fbbf24; } /* amber-400 */
-.password-meter .meter-bar.active:nth-child(3) { background: #34d399; } /* emerald-400 */
-.password-meter .meter-bar.active:nth-child(4) { background: #22c55e; } /* green-500 */
+.dark-mode .form-control::placeholder { color: #94a3b8; opacity: 1; } /* slate-400 */
+.dark-mode .form-text { color: #a1a1aa; } /* zinc-400 */
+.dark-mode .input-group-text { background-color: #111827; color: var(--text); border-color: rgba(255,255,255,0.12); }
+
+/* Valid/invalid borders visible in dark */
+.dark-mode .form-control.is-valid { border-color: #22c55e; }
+.dark-mode .form-control.is-invalid { border-color: #ef4444; }
+
+/* Caret visibility */
+.dark-mode input, .dark-mode textarea { caret-color: var(--brand); }
 
 /* -----------------------------------------------------------------------------
    Tables
 ----------------------------------------------------------------------------- */
-.table thead th {
-  font-weight: 700;
-  border-bottom-width: 1px;
-}
-.table-hover tbody tr:hover {
-  background-color: rgba(0,0,0,0.03);
-}
-.dark-mode .table-hover tbody tr:hover {
-  background-color: rgba(255,255,255,0.05);
-}
+.table thead th { font-weight: 700; border-bottom-width: 1px; }
+.table-hover tbody tr:hover { background-color: rgba(0,0,0,0.03); }
+.dark-mode .table-hover tbody tr:hover { background-color: rgba(255,255,255,0.08); }
+.dark-mode .table { color: var(--text); }
+.dark-mode .table thead th { color: #f8fafc; border-color: rgba(255,255,255,0.12); }
+.dark-mode .table td, .dark-mode .table th { border-color: rgba(255,255,255,0.08); }
 
 /* Badges */
 .badge { font-weight: 600; }
@@ -162,6 +183,7 @@ body {
 .toast .toast-body { color: #fff; border-radius: .75rem; }
 .toast-success { background: linear-gradient(135deg, var(--success), #16a34a); }
 .toast-danger  { background: linear-gradient(135deg, var(--danger),  #b91c1c); }
+/* Warning uses dark text on bright bg to preserve contrast */
 .toast-warning { background: linear-gradient(135deg, var(--warning), #d97706); color: #111827; }
 .toast-info    { background: linear-gradient(135deg, var(--info),    #1d4ed8); }
 
@@ -174,32 +196,42 @@ body {
   border-top: 1px solid var(--card-border);
 }
 .dark-mode .app-footer {
-  background: rgba(17,24,39,0.4);
+  background: rgba(17,24,39,0.6);
+  border-top-color: rgba(255,255,255,0.12);
 }
-
-/* -----------------------------------------------------------------------------
-   Utilities
------------------------------------------------------------------------------ */
-.text-muted { color: var(--muted) !important; }
 
 /* -----------------------------------------------------------------------------
    Homepage hero & FAB
 ----------------------------------------------------------------------------- */
+/* Light-mode hero retains soft white glows */
 .hero-card {
   background:
     radial-gradient(600px 300px at -10% -10%, rgba(255,255,255,0.45), transparent 60%),
     radial-gradient(600px 300px at 110% -10%, rgba(255,255,255,0.35), transparent 60%),
     var(--card-bg);
 }
-.hero-title {
-  letter-spacing: -0.5px;
+
+/* In dark mode, remove the light glows to boost white text contrast */
+.dark-mode .hero-card {
+  background:
+    radial-gradient(700px 340px at -10% -10%, rgba(0,0,0,0.40), transparent 60%),
+    radial-gradient(700px 340px at 110% -10%, rgba(0,0,0,0.35), transparent 60%),
+    var(--card-bg);
 }
 
-.hero-lookup .form-control-lg {
-  padding-top: .9rem;
-  padding-bottom: .9rem;
+/* Hero title: brighter + subtle shadow for legibility */
+.hero-title { letter-spacing: -0.5px; }
+.dark-mode .hero-title {
+  color: #ffffff;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.45);
 }
 
+/* Hero lookup card: heading and icon brighter in dark */
+.hero-lookup .form-control-lg { padding-top: .9rem; padding-bottom: .9rem; }
+.dark-mode .hero-lookup h5 { color: #ffffff; }
+.dark-mode .hero-lookup h5 .bi { color: #ffffff; opacity: 0.95; }
+
+/* Feature blocks: ensure headings are bright in dark */
 .feature-icon {
   width: 42px; height: 42px;
   border-radius: .75rem;
@@ -209,7 +241,10 @@ body {
   flex: 0 0 42px;
   font-size: 1.1rem;
 }
+/* Additional confidence: bump feature headings */
+.dark-mode .feature-icon + div h5 { color: #ffffff; }
 
+/* Floating CTA */
 .fab-report {
   position: fixed;
   right: 1.25rem;
@@ -224,4 +259,8 @@ body {
   font-weight: 600;
 }
 .fab-report:hover { filter: brightness(0.95); text-decoration: none; }
-.fa
+.fab-report i { font-size: 1.1rem; line-height: 1; }
+
+@media (max-width: 576px) {
+  .fab-report { padding: .7rem .9rem; }
+}
